@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "rewriteRelativeImportExtensions": true,
+    "module": "es2020",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "es2020",
+    "strict": true,
+    "noImplicitAny": true,
+    "declaration": true,
+    "outDir": "dist"
+  },
+  "exclude": ["dist"],
+  "include": ["src/**/*"]
+}
