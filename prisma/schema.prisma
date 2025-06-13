@@ -13,3 +13,117 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model User {
+  id                String              @id @default(uuid())
+  name              String
+  email             String              @unique
+  subscription_type String              @default("free")
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  decks             Deck[]              @relation("UserDecks")
+  collaborations    DeckCollaborator[]  @relation("UserCollaborations")
+  cardProgress      UserCardProgress[]
+  responses         UserResponse[]
+  cardReviews       UserCardReview[]    
+}
+
+model Deck {
+  id             String              @id @default(uuid())
+  user           User                @relation("UserDecks", fields: [userId], references: [id])
+  userId         String
+  name           String
+  topic          String?
+  isPublic       Boolean             @default(false)
+  lastReviewedAt DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  cards          Card[]
+  collaborators  DeckCollaborator[]  @relation("DeckCollaborators")
+}
+
+model DeckCollaborator {
+  id        String  @id @default(uuid())
+  role      String  @default("viewer") // could be 'editor', 'viewer', etc.
+  addedAt   DateTime @default(now())
+
+  deck      Deck    @relation("DeckCollaborators", fields: [deckId], references: [id])
+  deckId    String
+  user      User    @relation("UserCollaborations", fields: [userId], references: [id])
+  userId    String
+
+  @@unique([deckId, userId])
+}
+
+model Card {
+  id              String     @id @default(uuid())
+  deck            Deck       @relation(fields: [deckId], references: [id])
+  deckId          String
+  type            String     @default("basic") // 'basic', 'multiple_choice', 'cloze', 'open_ended'
+  question        String
+  correctAnswer   String?
+  incorrectAnswers String[]  // array of incorrect options for MCQs
+  referenceAnswer String?    // For AI grading of open-ended answers
+  topic           String?
+  subtopic        String?
+  sourceType      String?    // e.g., 'manual', 'ai', 'upload'
+  sourceMetadata  Json?      // flexible metadata field
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  userProgress    UserCardProgress[]
+  userResponses   UserResponse[]
+  cardReviews     UserCardReview[]  
+}
+
+model UserCardProgress {
+  userId          String
+  cardId          String
+  lastReviewedAt  DateTime?
+  nextReviewAt    DateTime?
+  easeFactor      Float    @default(2.5)
+  reviewCount     Int      @default(0)
+  correctStreak   Int      @default(0)
+  isMarkedForReview Boolean @default(false)
+
+  user            User     @relation(fields: [userId], references: [id])
+  card            Card     @relation(fields: [cardId], references: [id])
+
+  @@id([userId, cardId])
+}
+
+model UserResponse {
+  id          String    @id @default(uuid())
+  userId      String
+  cardId      String
+  userInput   String
+  aiFeedback  String?
+  isCorrect   Boolean?
+  createdAt   DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id])
+  card        Card      @relation(fields: [cardId], references: [id])
+}
+
+model UserCardReview {
+  id           String   @id @default(uuid())
+  userId       String
+  cardId       String
+  reviewedAt   DateTime @default(now())
+  quality      Int      // e.g., 0-5 recall quality rating
+  easeFactor   Float?   // updated ease factor after review
+  interval     Float?   // interval in days computed for next review
+  a            Float?   // FSRS model parameter
+  b            Float?   // FSRS model parameter
+  c            Float?   // FSRS model parameter
+
+  user         User     @relation(fields: [userId], references: [id])
+  card         Card     @relation(fields: [cardId], references: [id])
+
+  @@unique([userId, cardId, reviewedAt])
+}
+
+
+
