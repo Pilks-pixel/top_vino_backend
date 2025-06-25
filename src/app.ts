@@ -6,7 +6,7 @@ import morgan from "morgan";
 
 // const prisma = new PrismaClient().$extends(withAccelerate());
 
-import { main } from "./queries.ts";
+// import { main } from "./queries.ts";
 
 var app = express();
 var corsOptions = {
@@ -18,7 +18,7 @@ app.use(morgan("combined"));
 app.use(express.json());
 
 app.get("/", async (req, res) => {
-  await main();
+  // await main();
 
   res.send("Hello World!");
 });
