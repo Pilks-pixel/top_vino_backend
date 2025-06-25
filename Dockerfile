@@ -1,4 +1,4 @@
-FROM node:22
+FROM node:lts
 
 WORKDIR /app
 
@@ -9,7 +9,7 @@ COPY . .
 
 EXPOSE 8000
 
-# RUN npx prisma generate
+RUN npx prisma generate
 
 CMD ["npm", "run", "dev"]
 

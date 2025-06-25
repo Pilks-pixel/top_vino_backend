@@ -1,6 +1,12 @@
 import express from "express";
 import cors from "cors";
 import morgan from "morgan";
+// import { PrismaClient } from "../generated/prisma";
+// import { withAccelerate } from "@prisma/extension-accelerate.ts";
+
+// const prisma = new PrismaClient().$extends(withAccelerate());
+
+import { main } from "./queries.ts";
 
 var app = express();
 var corsOptions = {
@@ -10,7 +16,10 @@ var corsOptions = {
 app.use(cors(corsOptions));
 app.use(morgan("combined"));
 app.use(express.json());
-app.get("/", (req, res) => {
+
+app.get("/", async (req, res) => {
+  await main();
+
   res.send("Hello World!");
 });
 
