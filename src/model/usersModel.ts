@@ -1,7 +1,4 @@
-import { PrismaClient } from "../../generated/prisma/client.js";
-import { withAccelerate } from "@prisma/extension-accelerate";
-
-const prisma = new PrismaClient().$extends(withAccelerate());
+import prisma from "../lib/prisma";
 
 async function addUser(user: User) {
   await prisma.user.create({
@@ -30,6 +27,12 @@ async function updateUser(email: string, data: Partial<User>) {
   return user;
 }
 
+async function deleteUser(email: string) {
+  await prisma.user.delete({
+    where: { email },
+  });
+}
+
 // Types
 export type User = {
   email: string;
@@ -37,4 +40,4 @@ export type User = {
   subscription_type: string;
 };
 
-export { addUser, getAllUsers, getUserByEmail, updateUser };
+export { addUser, getAllUsers, getUserByEmail, updateUser, deleteUser };
