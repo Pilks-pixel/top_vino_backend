@@ -34,10 +34,18 @@ async function deleteUser(email: string) {
 }
 
 // Types
+// Available subscription types for a user.
+// - FREE: User has a free subscription.
+// - PRO: User has a pro (paid) subscription.
+enum SubscriptionType {
+  FREE = "FREE",
+  PRO = "PRO",
+}
+
 export type User = {
   email: string;
   name: string;
-  subscription_type: string;
+  subscription_type: SubscriptionType;
 };
 
 export { addUser, getAllUsers, getUserByEmail, updateUser, deleteUser };

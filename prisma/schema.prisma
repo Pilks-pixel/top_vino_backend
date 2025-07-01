@@ -15,11 +15,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum SubscriptionType {
+  FREE
+  PRO
+}
+
 model User {
   id                String              @id @default(uuid())
   name              String
   email             String              @unique
-  subscription_type String              @default("free")
+  subscription_type SubscriptionType    @default(FREE)
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
 

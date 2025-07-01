@@ -1,11 +1,6 @@
 import express from "express";
 import cors from "cors";
 import morgan from "morgan";
-// import { PrismaClient } from "../generated/prisma";
-// import { withAccelerate } from "@prisma/extension-accelerate.ts";
-
-// const prisma = new PrismaClient().$extends(withAccelerate());
-
 // import { main } from "./queries.ts";
 
 var app = express();
