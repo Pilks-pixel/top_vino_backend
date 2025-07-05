@@ -1,11 +1,5 @@
 import prisma from "../lib/prisma";
 
-async function addUser(user: User) {
-  await prisma.user.create({
-    data: user,
-  });
-}
-
 async function getAllUsers() {
   const allUsers = await prisma.user.findMany();
   console.log(allUsers);
@@ -19,7 +13,13 @@ async function getUserByEmail(email: string) {
   return user;
 }
 
-async function updateUser(email: string, data: Partial<User>) {
+async function postUser(user: User) {
+  await prisma.user.create({
+    data: user,
+  });
+}
+
+async function putUserByEmail(email: string, data: Partial<User>) {
   const user = await prisma.user.update({
     where: { email },
     data,
@@ -27,7 +27,7 @@ async function updateUser(email: string, data: Partial<User>) {
   return user;
 }
 
-async function deleteUser(email: string) {
+async function deleteUserByEmail(email: string) {
   await prisma.user.delete({
     where: { email },
   });
@@ -48,4 +48,10 @@ export type User = {
   subscription_type: SubscriptionType;
 };
 
-export { addUser, getAllUsers, getUserByEmail, updateUser, deleteUser };
+export {
+  postUser,
+  getAllUsers,
+  getUserByEmail,
+  putUserByEmail,
+  deleteUserByEmail,
+};
