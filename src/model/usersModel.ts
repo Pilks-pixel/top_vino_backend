@@ -13,23 +13,31 @@ async function getUserByEmail(email: string) {
   return user;
 }
 
-async function postUser(user: User) {
-  await prisma.user.create({
-    data: user,
+async function getUserByID(id: string) {
+  const user = await prisma.user.findUnique({
+    where: { id },
   });
+  return user;
 }
 
-async function putUserByEmail(email: string, data: Partial<User>) {
+async function postUser(user: User) {
+  const result = await prisma.user.create({
+    data: user,
+  });
+  return result;
+}
+
+async function putUserByID(id: string, data: Partial<User>) {
   const user = await prisma.user.update({
-    where: { email },
+    where: { id },
     data,
   });
   return user;
 }
 
-async function deleteUserByEmail(email: string) {
+async function deleteUserByID(id: string) {
   await prisma.user.delete({
-    where: { email },
+    where: { id },
   });
 }
 
@@ -52,6 +60,7 @@ export {
   postUser,
   getAllUsers,
   getUserByEmail,
-  putUserByEmail,
-  deleteUserByEmail,
+  getUserByID,
+  putUserByID,
+  deleteUserByID,
 };

@@ -2,8 +2,9 @@ import {
   postUser,
   getAllUsers,
   getUserByEmail,
-  putUserByEmail,
-  deleteUserByEmail,
+  getUserByID,
+  putUserByID,
+  deleteUserByID,
 } from "../model/usersModel";
 import type { User } from "../model/usersModel";
 
@@ -13,6 +14,14 @@ async function readUsers() {
     throw new Error("No users found");
   }
   return users;
+}
+
+async function readUserByID(id: string) {
+  const user = await getUserByID(id);
+  if (!user) {
+    throw new Error("User not found");
+  }
+  return user;
 }
 
 async function readUser(email: string) {
@@ -32,21 +41,28 @@ async function createUser(user: User) {
   return newUser;
 }
 
-async function updateUser(email: string, data: Partial<User>) {
-  const user = await putUserByEmail(email, data);
+async function updateUser(id: string, data: Partial<User>) {
+  const user = await putUserByID(id, data);
   if (!user) {
     throw new Error("User not found");
   }
   return user;
 }
 
-async function deleteUser(email: string) {
-  const user = await getUserByEmail(email);
+async function deleteUser(id: string) {
+  const user = await getUserByID(id);
   if (!user) {
     throw new Error("User not found");
   }
-  await deleteUserByEmail(email);
+  await deleteUserByID(id);
   return { message: "User deleted successfully" };
 }
 
-export { readUsers, readUser, createUser, updateUser, deleteUser };
+export {
+  readUsers,
+  readUserByID,
+  readUser,
+  createUser,
+  updateUser,
+  deleteUser,
+};
