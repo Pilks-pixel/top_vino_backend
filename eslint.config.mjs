@@ -16,5 +16,5 @@ export default defineConfig([
   },
   tseslint.configs.recommended,
   { rules: { "no-var": "off" } },
-  { ignores: ["./dist"] },
+  { ignores: ["./dist", "./generated"] },
 ]);

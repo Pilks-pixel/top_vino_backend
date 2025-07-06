@@ -6,8 +6,8 @@ import {
   createUser,
   updateUser,
   deleteUser,
-} from "../../services/user.service";
-import type { User } from "../../model/usersModel";
+} from "../../services/user.service.ts";
+import type { User } from "../../model/usersModel.ts";
 
 async function httpGetUsers(req: express.Request, res: express.Response) {
   try {
