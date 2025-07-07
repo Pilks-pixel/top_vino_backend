@@ -6,4 +6,6 @@ const User = z.strictObject({
   subscription_type: z.enum(["FREE", "PRO"]),
 });
 
+type User = z.infer<typeof User>;
+
 export { User };

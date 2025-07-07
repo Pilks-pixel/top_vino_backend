@@ -7,7 +7,7 @@ import {
   updateUser,
   deleteUser,
 } from "../../services/user.service.ts";
-import type { User } from "../../model/usersModel.ts";
+import type { User } from "../../utils/userSchema.ts";
 
 async function httpGetUsers(req: express.Request, res: express.Response) {
   try {

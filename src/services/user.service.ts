@@ -6,7 +6,7 @@ import {
   putUserByID,
   deleteUserByID,
 } from "../model/usersModel.ts";
-import type { User } from "../model/usersModel.ts";
+import type { User } from "../utils/userSchema.ts";
 
 async function readUsers() {
   const users = await getAllUsers();

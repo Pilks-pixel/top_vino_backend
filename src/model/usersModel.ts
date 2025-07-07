@@ -1,5 +1,7 @@
 import prisma from "../lib/prisma.ts";
 
+import { User } from "../utils/userSchema.ts";
+
 async function getAllUsers() {
   const allUsers = await prisma.user.findMany();
   console.log(allUsers);
@@ -40,21 +42,6 @@ async function deleteUserByID(id: string) {
     where: { id },
   });
 }
-
-// Types
-// Available subscription types for a user.
-// - FREE: User has a free subscription.
-// - PRO: User has a pro (paid) subscription.
-enum SubscriptionType {
-  FREE = "FREE",
-  PRO = "PRO",
-}
-
-export type User = {
-  email: string;
-  name: string;
-  subscription_type: SubscriptionType;
-};
 
 export {
   postUser,
