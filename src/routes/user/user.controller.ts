@@ -7,7 +7,7 @@ import {
   updateUser,
   deleteUser,
 } from "../../services/user.service.ts";
-import type { User } from "../../utils/userSchema.ts";
+import type User from "../../utils/userSchema.ts";
 
 async function httpGetUsers(req: express.Request, res: express.Response) {
   try {
@@ -21,7 +21,7 @@ async function httpGetUsers(req: express.Request, res: express.Response) {
   }
 }
 async function httpGetUserByEmail(req: express.Request, res: express.Response) {
-  const email = req.params.email;
+  const { email } = req.params;
 
   try {
     const user = await readUser(email);

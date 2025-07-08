@@ -8,4 +8,4 @@ const User = z.strictObject({
 
 type User = z.infer<typeof User>;
 
-export { User };
+export default User;

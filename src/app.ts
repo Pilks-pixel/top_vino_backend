@@ -1,7 +1,8 @@
 import express from "express";
 import cors from "cors";
 import morgan from "morgan";
-// import { main } from "./queries.ts";
+
+import userRouter from "../src/routes/user/user.router.ts";
 
 var app = express();
 var corsOptions = {
@@ -17,5 +18,7 @@ app.get("/", async (req, res) => {
 
   res.send("Hello World!");
 });
+
+app.use("/user", userRouter);
 
 export default app;
