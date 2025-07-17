@@ -3,6 +3,7 @@ import cors from "cors";
 import morgan from "morgan";
 
 import userRouter from "../src/routes/user/user.router.ts";
+import { errorHandler } from "../src/middlewares/errorHandler.ts";
 
 var app = express();
 var corsOptions = {
@@ -20,5 +21,6 @@ app.get("/", async (req, res) => {
 });
 
 app.use("/user", userRouter);
+app.use(errorHandler);
 
 export default app;

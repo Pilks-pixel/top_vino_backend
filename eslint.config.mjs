@@ -20,7 +20,7 @@ export default defineConfig([
       "no-var": "off",
       "@typescript-eslint/no-unused-vars": [
         "error",
-        { argsIgnorePattern: "next" },
+        { argsIgnorePattern: "^_" },
       ],
     },
   },

@@ -1,4 +1,4 @@
-import type { Request, Response } from "express";
+import type { Request, Response, NextFunction } from "express";
 import {
   readUser,
   readUserByID,
@@ -9,60 +9,57 @@ import {
 } from "../../services/user.service.ts";
 import type User from "../../utils/userSchema.ts";
 
-async function httpGetUsers(req: Request, res: Response) {
+async function httpGetUsers(req: Request, res: Response, next: NextFunction) {
   try {
     const users = await readUsers();
     res.status(200).json(users);
   } catch (error) {
-    res.status(500).json({
-      error:
-        error instanceof Error ? error.message : "Failed to retrieve users",
-    });
+    next(error);
   }
 }
-async function httpGetUserByEmail(req: Request, res: Response) {
+
+async function httpGetUserByEmail(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   const { email } = req.params;
 
   try {
     const user = await readUser(email);
     res.status(200).json(user);
   } catch (error) {
-    res.status(500).json({
-      error: error instanceof Error ? error.message : "Failed to retrieve user",
-    });
+    next(error);
   }
 }
-async function httpGetUserByID(req: Request, res: Response) {
+async function httpGetUserByID(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   const { id } = req.params;
 
   try {
     const user = await readUserByID(id);
     res.status(200).json(user);
   } catch (error) {
-    res.status(500).json({
-      error: error instanceof Error ? error.message : "Failed to retrieve user",
-    });
+    next(error);
   }
 }
-async function httpCreateUser(req: Request, res: Response) {
+async function httpCreateUser(req: Request, res: Response, next: NextFunction) {
   const newUser: User = req.body;
 
   try {
     const createdUser = await createUser(newUser);
     res.status(201).json(createdUser);
   } catch (error) {
-    res.status(500).json({
-      error:
-        error instanceof Error
-          ? error.message
-          : `Failed to add user ${newUser.name}`,
-    });
+    next(error);
   }
 
   return;
 }
 
-async function httpUpdateUser(req: Request, res: Response) {
+async function httpUpdateUser(req: Request, res: Response, next: NextFunction) {
   const { id } = req.params;
   const userData: Partial<User> = req.body;
 
@@ -70,22 +67,18 @@ async function httpUpdateUser(req: Request, res: Response) {
     const updatedUser = await updateUser(id, userData);
     res.status(200).json(updatedUser);
   } catch (error) {
-    res.status(500).json({
-      error: error instanceof Error ? error.message : "Failed to update user",
-    });
+    next(error);
   }
 }
 
-async function httpDeleteUser(req: Request, res: Response) {
+async function httpDeleteUser(req: Request, res: Response, next: NextFunction) {
   const { id } = req.params;
 
   try {
     const response = await deleteUser(id);
     res.status(200).json(response);
   } catch (error) {
-    res.status(500).json({
-      error: error instanceof Error ? error.message : "Failed to delete user",
-    });
+    next(error);
   }
 }
 
