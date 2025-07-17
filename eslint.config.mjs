@@ -15,6 +15,14 @@ export default defineConfig([
     languageOptions: { globals: globals.node },
   },
   tseslint.configs.recommended,
-  { rules: { "no-var": "off" } },
+  {
+    rules: {
+      "no-var": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "next" },
+      ],
+    },
+  },
   { ignores: ["./dist", "./generated"] },
 ]);

@@ -1,4 +1,4 @@
-import express from "express";
+import type { Request, Response } from "express";
 import {
   readUser,
   readUserByID,
@@ -9,7 +9,7 @@ import {
 } from "../../services/user.service.ts";
 import type User from "../../utils/userSchema.ts";
 
-async function httpGetUsers(req: express.Request, res: express.Response) {
+async function httpGetUsers(req: Request, res: Response) {
   try {
     const users = await readUsers();
     res.status(200).json(users);
@@ -20,7 +20,7 @@ async function httpGetUsers(req: express.Request, res: express.Response) {
     });
   }
 }
-async function httpGetUserByEmail(req: express.Request, res: express.Response) {
+async function httpGetUserByEmail(req: Request, res: Response) {
   const { email } = req.params;
 
   try {
@@ -32,7 +32,7 @@ async function httpGetUserByEmail(req: express.Request, res: express.Response) {
     });
   }
 }
-async function httpGetUserByID(req: express.Request, res: express.Response) {
+async function httpGetUserByID(req: Request, res: Response) {
   const { id } = req.params;
 
   try {
@@ -44,7 +44,7 @@ async function httpGetUserByID(req: express.Request, res: express.Response) {
     });
   }
 }
-async function httpCreateUser(req: express.Request, res: express.Response) {
+async function httpCreateUser(req: Request, res: Response) {
   const newUser: User = req.body;
 
   try {
@@ -62,7 +62,7 @@ async function httpCreateUser(req: express.Request, res: express.Response) {
   return;
 }
 
-async function httpUpdateUser(req: express.Request, res: express.Response) {
+async function httpUpdateUser(req: Request, res: Response) {
   const { id } = req.params;
   const userData: Partial<User> = req.body;
 
@@ -76,7 +76,7 @@ async function httpUpdateUser(req: express.Request, res: express.Response) {
   }
 }
 
-async function httpDeleteUser(req: express.Request, res: express.Response) {
+async function httpDeleteUser(req: Request, res: Response) {
   const { id } = req.params;
 
   try {

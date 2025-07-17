@@ -15,7 +15,7 @@ import validationMiddleware from "../../middlewares/validationMiddleware.ts";
 const userRouter = express.Router();
 
 userRouter.get("/", httpGetUsers);
-userRouter.get("/:email", httpGetUserByEmail);
+userRouter.get("/auth/:email", httpGetUserByEmail);
 userRouter.get("/:id", httpGetUserByID);
 userRouter.post("/", validationMiddleware(User), httpCreateUser);
 userRouter.put("/:id", validationMiddleware(User), httpUpdateUser);

@@ -1,13 +1,9 @@
 import * as z from "zod/v4";
 
-import express from "express";
+import type { Request, Response, NextFunction } from "express";
 
 function validationMiddleware(schema: z.ZodType) {
-  return function (
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction,
-  ) {
+  return function (req: Request, res: Response, next: NextFunction) {
     const result = schema.safeParse(req.body);
     if (!result.success) {
       res.status(400).json({

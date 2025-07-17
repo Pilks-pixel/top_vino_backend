@@ -33,9 +33,10 @@ async function readUser(email: string) {
 }
 
 async function createUser(user: User) {
-  if (!user.email || !user.name || !user.subscription_type) {
-    throw new Error("Missing required user data");
-  }
+  // Validation done with Zod in middleware
+  // if (!user.email || !user.name || !user.subscription_type) {
+  //   throw new Error("Missing required user data");
+  // }
 
   const newUser = await postUser(user);
   return newUser;
