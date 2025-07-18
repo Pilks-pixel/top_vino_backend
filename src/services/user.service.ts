@@ -1,3 +1,4 @@
+import { AppError } from "../utils/appError.ts";
 import {
   postUser,
   getAllUsers,
@@ -11,7 +12,7 @@ import type User from "../utils/userSchema.ts";
 async function readUsers() {
   const users = await getAllUsers();
   if (!users || users.length === 0) {
-    throw new Error("No users found");
+    throw new AppError("No users found", 404);
   }
   return users;
 }
@@ -19,7 +20,7 @@ async function readUsers() {
 async function readUserByID(id: string) {
   const user = await getUserByID(id);
   if (!user) {
-    throw new Error("User not found");
+    throw new AppError("User not found", 404);
   }
   return user;
 }
@@ -27,7 +28,7 @@ async function readUserByID(id: string) {
 async function readUser(email: string) {
   const user = await getUserByEmail(email);
   if (!user) {
-    throw new Error("User not found");
+    throw new AppError("User not found", 404);
   }
   return user;
 }
@@ -45,7 +46,7 @@ async function createUser(user: User) {
 async function updateUser(id: string, data: Partial<User>) {
   const user = await putUserByID(id, data);
   if (!user) {
-    throw new Error("User not found");
+    throw new AppError("No User found to update", 404);
   }
   return user;
 }
@@ -53,7 +54,7 @@ async function updateUser(id: string, data: Partial<User>) {
 async function deleteUser(id: string) {
   const user = await getUserByID(id);
   if (!user) {
-    throw new Error("User not found");
+    throw new AppError("No User found to delete", 404);
   }
   await deleteUserByID(id);
   return { message: "User deleted successfully" };
