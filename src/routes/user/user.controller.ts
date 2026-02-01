@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from "express";
+import type { Request, Response } from "express";
 import {
   readUser,
   readUserByID,
@@ -8,79 +8,43 @@ import {
   deleteUser,
 } from "../../services/user.service.ts";
 import type User from "../../utils/userSchema.ts";
+import { catchAsync } from "../../utils/catchAsync.ts";
 
-async function httpGetUsers(req: Request, res: Response, next: NextFunction) {
-  try {
-    const users = await readUsers();
-    res.status(200).json(users);
-  } catch (error) {
-    next(error);
-  }
-}
+const httpGetUsers = catchAsync(async (_req: Request, res: Response) => {
+  const users = await readUsers();
+  res.status(200).json({ success: true, data: users });
+});
 
-async function httpGetUserByEmail(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) {
+const httpGetUserByEmail = catchAsync(async (req: Request, res: Response) => {
   const { email } = req.params;
+  const user = await readUser(email);
+  res.status(200).json({ success: true, data: user });
+});
 
-  try {
-    const user = await readUser(email);
-    res.status(200).json(user);
-  } catch (error) {
-    next(error);
-  }
-}
-async function httpGetUserByID(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) {
+const httpGetUserByID = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
+  const user = await readUserByID(id);
+  res.status(200).json({ success: true, data: user });
+});
 
-  try {
-    const user = await readUserByID(id);
-    res.status(200).json(user);
-  } catch (error) {
-    next(error);
-  }
-}
-async function httpCreateUser(req: Request, res: Response, next: NextFunction) {
+const httpCreateUser = catchAsync(async (req: Request, res: Response) => {
   const newUser: User = req.body;
+  const createdUser = await createUser(newUser);
+  res.status(201).json({ success: true, data: createdUser });
+});
 
-  try {
-    const createdUser = await createUser(newUser);
-    res.status(201).json(createdUser);
-  } catch (error) {
-    next(error);
-  }
-
-  return;
-}
-
-async function httpUpdateUser(req: Request, res: Response, next: NextFunction) {
+const httpUpdateUser = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   const userData: Partial<User> = req.body;
+  const updatedUser = await updateUser(id, userData);
+  res.status(200).json({ success: true, data: updatedUser });
+});
 
-  try {
-    const updatedUser = await updateUser(id, userData);
-    res.status(200).json(updatedUser);
-  } catch (error) {
-    next(error);
-  }
-}
-
-async function httpDeleteUser(req: Request, res: Response, next: NextFunction) {
+const httpDeleteUser = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
-
-  try {
-    const response = await deleteUser(id);
-    res.status(200).json(response);
-  } catch (error) {
-    next(error);
-  }
-}
+  const response = await deleteUser(id);
+  res.status(200).json({ success: true, ...response });
+});
 
 export {
   httpGetUsers,
