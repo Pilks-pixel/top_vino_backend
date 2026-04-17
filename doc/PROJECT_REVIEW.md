@@ -1,7 +1,7 @@
 # Top Vino Backend - Project Review & Roadmap
 
-**Date:** January 31, 2026  
-**Status:** In Development - Phase 1 Priority
+**Date:** April 17, 2026  
+**Status:** In Development - Phase 2 TDD-First Kickoff
 
 ---
 
@@ -77,12 +77,13 @@
   - `DELETE /user/:id` - Delete user
 - **Validation**: Zod schema validation middleware (`src/utils/userSchema.ts`)
 
-### Error Handling ⚠️ (PARTIAL)
+### Error Handling ✓ (COMPLETE)
 
-- Custom `AppError` class with status codes (`src/utils/appError.ts`)
-- `ValidationError` subclass for validation failures
-- Global error handler middleware (`src/middlewares/errorHandler.ts`)
-- **However**: Error handler is basic and doesn't handle Prisma errors (as noted in TODO comment)
+- Extended `AppError` hierarchy with specific HTTP error classes (`src/utils/appError.ts`)
+- Prisma error transformation utility for database-specific failures (`src/utils/prismaErrorHandler.ts`)
+- Global error handler with centralized JSON error responses (`src/middlewares/errorHandler.ts`)
+- Validation middleware integrated into centralized error flow (`src/middlewares/validationMiddleware.ts`)
+- Async controller wrapper to remove repetitive try/catch blocks (`src/utils/catchAsync.ts`)
 
 ### Database Schema ✓
 
@@ -97,13 +98,12 @@
 
 ### Critical Issues
 
-#### 1. Error Handling System 🔴 (INCOMPLETE)
+#### 1. Automated Testing Harness 🔴
 
-- Error handler doesn't catch Prisma-specific errors
-- No differentiation for P2002 (unique constraint), P2025 (record not found), etc.
-- ValidationError class exists but not integrated with validation middleware
-- No error logging/monitoring
-- No development vs production error responses
+- No Jest test runner configured yet
+- No Supertest integration suite for HTTP behavior yet
+- No shared test helpers, fixtures, or database lifecycle utilities yet
+- Phase 1 behavior has been manually verified but not yet locked down with regression tests
 
 #### 2. Core Feature Controllers 🔴
 
@@ -126,7 +126,7 @@
 - No rate limiting
 - No API documentation (Swagger/OpenAPI)
 - No environment variable validation
-- No testing infrastructure (Jest/Supertest)
+- No automated testing infrastructure installed yet (Jest/Supertest planned as Phase 2 kickoff)
 - No CI/CD pipeline
 - No production deployment configuration
 - No health check endpoints
@@ -137,9 +137,9 @@
 
 ## 🚀 Development Roadmap
 
-### PHASE 1: Complete Error Handling System (1-2 days)
+### PHASE 1: Complete Error Handling System (Done)
 
-**Priority: CRITICAL - Pick up where left off**
+**Status: COMPLETE**
 
 #### Tasks:
 
@@ -165,47 +165,63 @@
    - Create `catchAsync` utility to wrap async route handlers
    - Eliminate try-catch blocks in controllers
 
-#### Acceptance Criteria:
+#### Outcome:
 
-- All Prisma errors properly caught and transformed
-- Validation errors return 400 with details
-- Production errors don't leak stack traces
-- All controllers use catchAsync wrapper
+- Prisma errors are transformed into application-level HTTP responses
+- Validation failures flow through the centralized error handler
+- Development and production responses are differentiated
+- Controllers use shared async error handling
 
 ---
 
-### PHASE 2: Complete Core CRUD Operations (3-5 days)
+### PHASE 2: TDD Foundation + Core CRUD Vertical Slices (3-5 days)
 
-**Replicate User module pattern for remaining entities**
+**Start with tests, then implement Deck, Card, and Card Review slices incrementally**
 
 #### Tasks:
 
-1. **Deck Module**
+1. **Testing Foundation**
+
+   - Install Jest, Supertest, and TypeScript test tooling
+   - Add shared test helpers, fixtures, and database lifecycle utilities
+   - Create package scripts for unit, integration, and full test runs
+
+2. **Phase 1 Regression Coverage**
+
+   - Add automated tests for error handling and validation behavior
+   - Add regression tests for existing User service and HTTP flows
+   - Lock in the current API error contract before extending the system
+
+3. **Deck Module**
 
    - Model: CRUD operations with user ownership checks
    - Service: Business logic for deck creation/deletion
    - Controller: HTTP handlers
    - Router: RESTful endpoints
    - Zod schema validation
-   - Test collaborator functionality
+   - Write unit and integration tests before implementation
 
-2. **Card Module**
+4. **Card Module**
 
    - Model: CRUD operations with deck association
    - Service: Handle different card types
    - Controller: HTTP handlers
    - Router: RESTful endpoints
    - Zod schemas for each card type
+   - Write unit and integration tests before implementation
 
-3. **Card Review Module**
+5. **Card Review Module**
    - Model: Record review sessions
    - Service: Implement FSRS algorithm
    - Controller: Submit review endpoints
    - Calculate next review date
    - Update user progress
+   - Write unit and integration tests before implementation
 
 #### Deliverables:
 
+- Jest + Supertest test harness with reusable helpers
+- Automated regression coverage for completed Phase 1 behavior
 - Full CRUD for Decks, Cards, CardReviews
 - Proper authorization (users can only access their own decks)
 - Working spaced repetition scheduling
@@ -237,16 +253,15 @@
 
 ---
 
-### PHASE 4: Testing Infrastructure (3-4 days)
+### PHASE 4: Test Expansion & Quality Gates (3-4 days)
 
 #### Tasks:
 
-1. **Setup Test Environment**
+1. **Expand Test Coverage**
 
-   - Install Jest, Supertest, ts-jest
-   - Configure separate test database
-   - Create test scripts in package.json
-   - Setup test database seeding
+   - Extend unit and integration coverage across all completed modules
+   - Fill gaps discovered during Phase 2 and Phase 3 delivery
+   - Improve fixture reuse and test data setup ergonomics
 
 2. **Unit Tests**
 
@@ -392,16 +407,18 @@ module.exports = {
 
 ### Week 1-2: Foundation
 
-- Phase 1: Error Handling ← **START HERE**
-- Phase 2: Core CRUD (Decks, Cards, Reviews)
+- Phase 1: Error Handling ✓ complete
+- Phase 2 kickoff: test harness + Phase 1 regression coverage
+- Phase 2 delivery: Deck and Card slices
 
 ### Week 3: Security
 
+- Phase 2 delivery: Card Review slice
 - Phase 3: Authentication & Authorization
 
 ### Week 4: Quality
 
-- Phase 4: Testing Infrastructure
+- Phase 4: Test expansion and quality gates
 
 ### Week 5: Production
 
@@ -420,11 +437,11 @@ module.exports = {
 
 ## 🎯 Immediate Next Steps
 
-1. ✅ **Complete the error handling system** (Phase 1 - Priority)
-2. Implement Deck and Card modules following the User module pattern
-3. Add authentication - can't launch without it
-4. Write tests - critical for refactoring confidence
-5. Production hardening - security and monitoring
+1. Set up Jest, Supertest, and shared test helpers
+2. Backfill automated tests for completed Phase 1 error handling and User flows
+3. Implement Deck, Card, and Card Review slices using TDD
+4. Add authentication once core CRUD behavior is covered by tests
+5. Continue production hardening after functional coverage improves
 
 ---
 
@@ -440,8 +457,8 @@ server/
 │   ├── lib/
 │   │   └── prisma.ts          # Prisma client instance
 │   ├── middlewares/
-│   │   ├── errorHandler.ts    # Global error handler (INCOMPLETE)
-│   │   └── validationMiddleware.ts  # Zod validation
+│   │   ├── errorHandler.ts    # Global error handler (COMPLETE)
+│   │   └── validationMiddleware.ts  # Zod validation wired into error handling
 │   ├── model/                 # Data access layer
 │   │   └── usersModel.ts      # User CRUD operations (COMPLETE)
 │   ├── routes/                # Controllers & routes
@@ -451,7 +468,9 @@ server/
 │   ├── services/              # Business logic layer
 │   │   └── user.service.ts    # User service (COMPLETE)
 │   └── utils/
-│       ├── appError.ts        # Custom error classes (PARTIAL)
+│       ├── appError.ts        # Custom error classes (COMPLETE)
+│       ├── catchAsync.ts      # Async controller wrapper
+│       ├── prismaErrorHandler.ts # Prisma error translation
 │       └── userSchema.ts      # Zod schemas (COMPLETE)
 ├── prisma/
 │   └── schema.prisma          # Database schema (COMPLETE)
@@ -474,8 +493,9 @@ server/
 
 ## 📝 Notes
 
-- Project was left mid-implementation of the error handling system
+- Phase 1 error handling has been completed and manually verified
 - User module is complete and serves as a template for other modules
+- The roadmap now treats testing as part of feature delivery, not a later standalone phase
+- The next implementation step is test harness setup plus Phase 1 regression coverage
 - Authentication system needs to be added before production
-- No tests exist yet - testing infrastructure needs to be built
 - Docker setup is ready for development but needs production optimization
