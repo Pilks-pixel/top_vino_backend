@@ -2,6 +2,30 @@
 
 This project uses Jest for automated tests, ts-jest to run TypeScript test files, Supertest for HTTP route tests, and Prisma against a dedicated PostgreSQL test database.
 
+## Prerequisites
+
+> **PostgreSQL must be running before any test command.**
+> Integration tests connect to a real database. If the database is offline, `globalSetup` will fail and all integration suites will abort.
+
+Start the database with Docker before running tests:
+
+```bash
+docker compose up -d postgres
+```
+
+If your Docker version uses the older command:
+
+```bash
+docker-compose up -d postgres
+```
+
+If the database is not running, the suite will print:
+
+```text
+[globalSetup] Cannot connect to PostgreSQL. Is the database running?
+  Start it with: docker compose up -d postgres
+```
+
 ## How to Run the Tests
 
 Run test commands from the `server` directory:
@@ -14,18 +38,6 @@ Install dependencies first if needed:
 
 ```bash
 npm install
-```
-
-Start PostgreSQL before running tests. With the local Docker setup, start the database service:
-
-```bash
-docker compose up -d postgres
-```
-
-If your Docker version uses the older command, use:
-
-```bash
-docker-compose up -d postgres
 ```
 
 Then run one of the npm scripts:
