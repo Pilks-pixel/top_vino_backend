@@ -20,7 +20,15 @@ export default async function globalSetup() {
 
   // 1. Create test database if it doesn't exist
   const client = new Client({ connectionString: adminUrl });
-  await client.connect();
+  try {
+    await client.connect();
+  } catch (err) {
+    throw new Error(
+      "[globalSetup] Cannot connect to PostgreSQL. Is the database running?\n" +
+        "  Start it with: docker compose up -d postgres\n" +
+        `  Original error: ${(err as Error).message}`,
+    );
+  }
 
   const result = await client.query(
     `SELECT 1 FROM pg_database WHERE datname = $1`,
