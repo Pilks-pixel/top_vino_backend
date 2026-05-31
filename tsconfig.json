@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "rewriteRelativeImportExtensions": true,
     "module": "nodenext",
     "moduleResolution": "nodenext",
@@ -10,8 +9,9 @@
     "strict": true,
     "noImplicitAny": true,
     "declaration": true,
-    "outDir": "dist"
+    "types": ["node", "jest"]
+    // "outDir": "dist",
   },
   "exclude": ["dist"],
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "__tests__/**/*"]
 }

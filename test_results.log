@@ -1,0 +1,114 @@
+
+> top_vino@1.0.0 test
+> node --experimental-vm-modules node_modules/.bin/jest --runInBand --ci --no-cache
+
+[globalSetup] Test database already exists: top_vino_test
+[globalSetup] Running migrations...
+Environment variables loaded from .env
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": PostgreSQL database "top_vino_test", schema "public" at "localhost:5432"
+
+2 migrations found in prisma/migrations
+
+
+No pending migrations to apply.
+┌─────────────────────────────────────────────────────────┐
+│  Update available 6.9.0 -> 7.7.0                        │
+│                                                         │
+│  This is a major update - please follow the guide at    │
+│  https://pris.ly/d/major-version-upgrade                │
+│                                                         │
+│  Run the following to update                            │
+│    npm i --save-dev prisma@latest                       │
+│    npm i @prisma/client@latest                          │
+└─────────────────────────────────────────────────────────┘
+[globalSetup] Migrations complete.
+FAIL __tests__/integration/user.routes.test.ts
+  ● Test suite failed to run
+
+    ReferenceError: exports is not defined
+
+
+
+      at __tests__/setup/jestEnvSetup.ts:35:23
+
+FAIL __tests__/integration/card.routes.test.ts
+  ● Test suite failed to run
+
+    ReferenceError: exports is not defined
+
+
+
+      at __tests__/setup/jestEnvSetup.ts:35:23
+
+FAIL __tests__/integration/deck.routes.test.ts
+  ● Test suite failed to run
+
+    ReferenceError: exports is not defined
+
+
+
+      at __tests__/setup/jestEnvSetup.ts:35:23
+
+FAIL __tests__/unit/user.service.test.ts
+  ● Test suite failed to run
+
+    ReferenceError: exports is not defined
+
+
+
+      at __tests__/setup/jestEnvSetup.ts:35:23
+
+FAIL __tests__/unit/deck.service.test.ts
+  ● Test suite failed to run
+
+    ReferenceError: exports is not defined
+
+
+
+      at __tests__/setup/jestEnvSetup.ts:35:23
+
+FAIL __tests__/unit/card.service.test.ts
+  ● Test suite failed to run
+
+    ReferenceError: exports is not defined
+
+
+
+      at __tests__/setup/jestEnvSetup.ts:35:23
+
+FAIL __tests__/integration/review.routes.test.ts
+  ● Test suite failed to run
+
+    ReferenceError: exports is not defined
+
+
+
+      at __tests__/setup/jestEnvSetup.ts:35:23
+
+FAIL __tests__/unit/review.service.test.ts
+  ● Test suite failed to run
+
+    ReferenceError: exports is not defined
+
+
+
+      at __tests__/setup/jestEnvSetup.ts:35:23
+
+FAIL __tests__/unit/appError.test.ts
+  ● Test suite failed to run
+
+    ReferenceError: exports is not defined
+
+
+
+      at __tests__/setup/jestEnvSetup.ts:35:23
+
+Test Suites: 9 failed, 9 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        0.077 s
+Ran all test suites.
+[globalTeardown] Test run complete.
+(node:59145) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

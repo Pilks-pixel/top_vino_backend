@@ -6,6 +6,7 @@ A spaced repetition learning/flashcard application backend built with Node.js, E
 
 - [Project Review & Roadmap](./doc/PROJECT_REVIEW.md) - Complete overview of the project status and development roadmap
 - [Phase 1: Error Handling](./doc/PHASE_1_ERROR_HANDLING.md) - Completed implementation details and acceptance criteria
+- [Testing Guide](./doc/TESTING.md) - How to run tests and how the test database setup works
 - [Phase 2 TDD PRD](./plans/phase-2-tdd-prd.md) - TDD-first execution plan for testing setup and core CRUD delivery
 
 ## 🚀 Quick Start
