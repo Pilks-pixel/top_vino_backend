@@ -13,12 +13,6 @@ Start the database with Docker before running tests:
 docker compose up -d postgres
 ```
 
-If your Docker version uses the older command:
-
-```bash
-docker-compose up -d postgres
-```
-
 If the database is not running, the suite will print:
 
 ```text
