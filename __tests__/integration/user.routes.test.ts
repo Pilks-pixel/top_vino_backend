@@ -33,6 +33,7 @@ describe("POST /user", () => {
       name: validUser.name,
     });
     expect(res.body.data.id).toBeDefined();
+    expect(res.body.data.passwordHash).toBeUndefined();
   });
 
   it("returns 409 on duplicate email", async () => {
@@ -50,8 +51,8 @@ describe("POST /user", () => {
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
     expect(res.body.details).toBeDefined();
-    expect(res.body.details.email).toBeDefined();
-    expect(res.body.details.name).toBeDefined();
+    expect(res.body.details.properties.email).toBeDefined();
+    expect(res.body.details.properties.name).toBeDefined();
   });
 
   it("returns 400 when subscription_type is invalid", async () => {
@@ -59,7 +60,7 @@ describe("POST /user", () => {
       .post("/user")
       .send({ ...validUser, subscription_type: "ENTERPRISE" });
     expect(res.status).toBe(400);
-    expect(res.body.details.subscription_type).toBeDefined();
+    expect(res.body.details.properties.subscription_type).toBeDefined();
   });
 });
 
@@ -72,6 +73,7 @@ describe("GET /user/:id", () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.id).toBe(user.id);
+    expect(res.body.data.passwordHash).toBeUndefined();
   });
 
   it("returns 404 for non-existent id", async () => {
@@ -92,6 +94,7 @@ describe("GET /user/auth/:email", () => {
     const res = await request(app).get(`/user/auth/${user.email}`);
     expect(res.status).toBe(200);
     expect(res.body.data.email).toBe(user.email);
+    expect(res.body.data.passwordHash).toBeUndefined();
   });
 
   it("returns 404 when email not found", async () => {
@@ -113,6 +116,7 @@ describe("PUT /user/:id", () => {
     expect(res.status).toBe(200);
     expect(res.body.data.name).toBe("Updated Name");
     expect(res.body.data.subscription_type).toBe("PRO");
+    expect(res.body.data.passwordHash).toBeUndefined();
   });
 
   it("returns 404 for non-existent user", async () => {
