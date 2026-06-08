@@ -14,7 +14,9 @@ function validationMiddleware(schema: z.ZodType) {
     const result = schema.safeParse(req.body);
 
     if (!result.success) {
-      throw new ValidationError("Validation failed", result.error.format());
+      const formattedErrors = z.treeifyError(result.error);
+      console.log(formattedErrors);
+      throw new ValidationError("Validation failed", formattedErrors);
     }
 
     // Attach validated data to request body (replaces with parsed/transformed data)
