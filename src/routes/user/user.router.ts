@@ -9,7 +9,7 @@ import {
   httpDeleteUser,
 } from "./user.controller.ts";
 
-import User from "../../utils/userSchema.ts";
+import { User } from "../../utils/userSchema.ts";
 import validationMiddleware from "../../middlewares/validationMiddleware.ts";
 
 const userRouter = express.Router();

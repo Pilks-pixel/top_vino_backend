@@ -7,7 +7,7 @@ import {
   updateUser,
   deleteUser,
 } from "../../services/user.service.ts";
-import type User from "../../utils/userSchema.ts";
+import type { User } from "../../utils/userSchema.ts";
 import { catchAsync } from "../../utils/catchAsync.ts";
 
 const httpGetUsers = catchAsync(async (_req: Request, res: Response) => {
