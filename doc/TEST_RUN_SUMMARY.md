@@ -81,9 +81,9 @@ The most important signal is not the coverage percentage yet. The most important
 
 The recommended order is:
 
-1. Make the current suite pass.
-2. Exclude generated Prisma files from coverage.
-3. Re-run coverage to get a meaningful baseline.
+1. Make the current suite pass. ✅
+2. Exclude generated Prisma files from coverage. ✅
+3. Re-run coverage to get a meaningful baseline. ✅
 4. Add tests for the lowest-risk uncovered app code first.
 5. Only then consider setting coverage thresholds.
 

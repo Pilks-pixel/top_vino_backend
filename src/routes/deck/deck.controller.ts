@@ -25,6 +25,11 @@ export const httpGetDeck = catchAsync(async (req: Request, res: Response) => {
 
 export const httpCreateDeck = catchAsync(
   async (req: Request, res: Response) => {
+    /**
+     * @todo: This will change when we implement authentication.
+     * We will get the userId from the authenticated session instead of the request body. e.g., const userId = req.user.id;
+     */
+
     const deck = await createDeck(req.body);
     res.status(201).json({ success: true, data: deck });
   },
