@@ -1,22 +1,8 @@
 import prisma from "../lib/prisma.ts";
-
-export interface ReviewCreateInput {
-  userId: string;
-  cardId: string;
-  quality: number;
-  easeFactor: number;
-  interval: number;
-}
-
-export interface ProgressUpsertInput {
-  userId: string;
-  cardId: string;
-  easeFactor: number;
-  reviewCount: number;
-  correctStreak: number;
-  lastReviewedAt: Date;
-  nextReviewAt: Date;
-}
+import type {
+  ReviewCreateInput,
+  ProgressUpsertInput,
+} from "../utils/reviewSchema.ts";
 
 export async function createReview(data: ReviewCreateInput) {
   return prisma.userCardReview.create({ data });
