@@ -62,6 +62,35 @@ describe("POST /review", () => {
   });
 });
 
+describe("multi-review sequence", () => {
+  it("follows SM-2 interval progression across five successful reviews", async () => {
+    const dayMs = 24 * 60 * 60 * 1000;
+    const expectedIntervals = [1, 6, 15, 38, 95];
+
+    const user = await createTestUser();
+    const deck = await createTestDeck(user.id);
+    const card = await createTestCard(deck.id);
+
+    for (const expectedDays of expectedIntervals) {
+      const requestStart = Date.now();
+      const res = await request(app).post("/review").send({
+        userId: user.id,
+        cardId: card.id,
+        quality: 4,
+      });
+
+      expect(res.status).toBe(201);
+      const nextReviewAt = new Date(
+        res.body.data.progress.nextReviewAt,
+      ).getTime();
+      const deltaMs = nextReviewAt - requestStart;
+      const expectedMs = expectedDays * dayMs;
+
+      expect(Math.abs(deltaMs - expectedMs)).toBeLessThanOrEqual(dayMs);
+    }
+  });
+});
+
 // ─── GET /review/due?userId= ──────────────────────────────────────────────────
 
 describe("GET /review/due", () => {
