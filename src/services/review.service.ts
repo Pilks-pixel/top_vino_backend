@@ -18,8 +18,14 @@ function sm2(
   easeFactor: number,
   reviewCount: number,
   correctStreak: number,
+  previousInterval: number,
   quality: number,
-): { newEaseFactor: number; newInterval: number; newStreak: number } {
+): {
+  newEaseFactor: number;
+  newInterval: number;
+  newStreak: number;
+  newReviewCount: number;
+} {
   const recalled = quality >= 3;
 
   let newEaseFactor =
@@ -28,24 +34,27 @@ function sm2(
 
   let newInterval: number;
   let newStreak: number;
+  let newReviewCount: number;
 
   if (!recalled) {
     newInterval = 1;
     newStreak = 0;
+    newReviewCount = 0;
   } else if (reviewCount === 0) {
     newInterval = 1;
     newStreak = 1;
+    newReviewCount = reviewCount + 1;
   } else if (reviewCount === 1) {
     newInterval = 6;
     newStreak = correctStreak + 1;
+    newReviewCount = reviewCount + 1;
   } else {
-    newInterval = Math.round(
-      (reviewCount === 2 ? 6 : reviewCount - 1) * newEaseFactor,
-    );
+    newInterval = Math.round(previousInterval * newEaseFactor);
     newStreak = correctStreak + 1;
+    newReviewCount = reviewCount + 1;
   }
 
-  return { newEaseFactor, newInterval, newStreak };
+  return { newEaseFactor, newInterval, newStreak, newReviewCount };
 }
 
 export async function submitReview(input: SubmitReviewInput) {
@@ -61,11 +70,13 @@ export async function submitReview(input: SubmitReviewInput) {
   const easeFactor = existing?.easeFactor ?? 2.5;
   const reviewCount = existing?.reviewCount ?? 0;
   const correctStreak = existing?.correctStreak ?? 0;
+  const currentInterval = existing?.currentInterval ?? 1;
 
-  const { newEaseFactor, newInterval, newStreak } = sm2(
+  const { newEaseFactor, newInterval, newStreak, newReviewCount } = sm2(
     easeFactor,
     reviewCount,
     correctStreak,
+    currentInterval,
     input.quality,
   );
 
@@ -86,7 +97,7 @@ export async function submitReview(input: SubmitReviewInput) {
     userId: input.userId,
     cardId: input.cardId,
     easeFactor: newEaseFactor,
-    reviewCount: reviewCount + 1,
+    reviewCount: newReviewCount,
     correctStreak: newStreak,
     currentInterval: newInterval,
     lastReviewedAt: now,
