@@ -11,6 +11,8 @@ import type { SubmitReviewInput } from "../utils/reviewSchema.ts";
 /**
  * SM-2 algorithm: computes next interval and ease factor from current state.
  * quality: 0-2 = forgot/hard, 3-5 = recalled
+ * after each review, the ef is adjusted based on the recall quality using this formula:
+ * ef = ef + (0.1 - (5 - q) × (0.08 + (5 - q) × 0.02))
  */
 function sm2(
   easeFactor: number,
@@ -47,6 +49,7 @@ function sm2(
 }
 
 export async function submitReview(input: SubmitReviewInput) {
+  // validate input quality - is this necessary? zod should handle it
   if (input.quality < 0 || input.quality > 5) {
     throw new BadRequestError("quality must be between 0 and 5");
   }
@@ -85,6 +88,7 @@ export async function submitReview(input: SubmitReviewInput) {
     easeFactor: newEaseFactor,
     reviewCount: reviewCount + 1,
     correctStreak: newStreak,
+    currentInterval: newInterval,
     lastReviewedAt: now,
     nextReviewAt,
   });

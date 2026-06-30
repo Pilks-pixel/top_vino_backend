@@ -49,6 +49,7 @@ const mockProgress = {
   easeFactor: 2.5,
   reviewCount: 0,
   correctStreak: 0,
+  currentInterval: 1,
   lastReviewedAt: null,
   nextReviewAt: null,
   isMarkedForReview: false,
