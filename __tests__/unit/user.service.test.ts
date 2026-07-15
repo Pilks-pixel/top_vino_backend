@@ -40,9 +40,11 @@ const mockUser = {
   id: "user-1",
   name: "Alice",
   email: "alice@test.com",
-  subscription_type: "FREE" as const,
+  subscriptionType: "FREE" as const,
   createdAt: new Date(),
   updatedAt: new Date(),
+  emailVerified: false,
+  image: null,
 };
 
 beforeEach(() => jest.clearAllMocks());
@@ -109,7 +111,7 @@ describe("createUser", () => {
     const input = {
       name: "Alice",
       email: "alice@test.com",
-      subscription_type: "FREE" as const,
+      subscriptionType: "FREE" as const,
     };
     const result = await createUser(input);
     expect(result).toEqual(mockUser);

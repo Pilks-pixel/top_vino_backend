@@ -18,7 +18,7 @@ afterAll(async () => disconnectDb());
 const validUser = {
   name: "Test User",
   email: "test@example.com",
-  subscription_type: "FREE",
+  subscriptionType: "FREE",
 };
 
 // ─── POST /user ───────────────────────────────────────────────────────────────
@@ -55,12 +55,12 @@ describe("POST /user", () => {
     expect(res.body.details.properties.name).toBeDefined();
   });
 
-  it("returns 400 when subscription_type is invalid", async () => {
+  it("returns 400 when subscriptionType is invalid", async () => {
     const res = await request(app)
       .post("/user")
-      .send({ ...validUser, subscription_type: "ENTERPRISE" });
+      .send({ ...validUser, subscriptionType: "ENTERPRISE" });
     expect(res.status).toBe(400);
-    expect(res.body.details.properties.subscription_type).toBeDefined();
+    expect(res.body.details.properties.subscriptionType).toBeDefined();
   });
 });
 
@@ -111,18 +111,18 @@ describe("PUT /user/:id", () => {
     const res = await request(app).put(`/user/${user.id}`).send({
       name: "Updated Name",
       email: user.email,
-      subscription_type: "PRO",
+      subscriptionType: "PRO",
     });
     expect(res.status).toBe(200);
     expect(res.body.data.name).toBe("Updated Name");
-    expect(res.body.data.subscription_type).toBe("PRO");
+    expect(res.body.data.subscriptionType).toBe("PRO");
     expect(res.body.data.passwordHash).toBeUndefined();
   });
 
   it("returns 404 for non-existent user", async () => {
     const res = await request(app)
       .put("/user/00000000-0000-0000-0000-000000000000")
-      .send({ name: "XX", email: "x@x.com", subscription_type: "FREE" });
+      .send({ name: "XX", email: "x@x.com", subscriptionType: "FREE" });
     expect(res.status).toBe(404);
   });
 });

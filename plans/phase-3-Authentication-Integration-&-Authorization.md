@@ -286,3 +286,9 @@ Set `getSession` to resolve `null` in tests that exercise the 401 path. Remove `
 - Device management
 - Audit logs
 - Session dashboard
+
+### Notes
+
+Note for production: before running this migration on a DB with existing User data, replace the DROP TABLE "User" / CREATE TABLE "user" block with ALTER TABLE "User" RENAME TO "user".
+
+

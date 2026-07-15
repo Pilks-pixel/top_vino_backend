@@ -17,7 +17,7 @@ export async function createTestUser(
   overrides: Partial<{
     name: string;
     email: string;
-    subscription_type: "FREE" | "PRO";
+    subscriptionType: "FREE" | "PRO";
   }> = {},
 ): Promise<User> {
   userCounter++;
@@ -25,7 +25,7 @@ export async function createTestUser(
     data: {
       name: overrides.name ?? `Test User ${userCounter}`,
       email: overrides.email ?? `user${userCounter}@test.com`,
-      subscription_type: overrides.subscription_type ?? "FREE",
+      subscriptionType: overrides.subscriptionType ?? "FREE",
     },
   });
 }
