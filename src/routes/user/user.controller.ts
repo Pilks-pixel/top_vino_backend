@@ -1,6 +1,5 @@
 import type { Request, Response } from "express";
 import {
-  readUser,
   readUserByID,
   readUsers,
   createUser,
@@ -15,11 +14,14 @@ export const httpGetUsers = catchAsync(async (_req: Request, res: Response) => {
   res.status(200).json({ success: true, data: users });
 });
 
-export const httpGetUserByEmail = catchAsync(
+export const httpGetCurrentUser = catchAsync(
   async (req: Request, res: Response) => {
-    const { email } = req.params;
-    const user = await readUser(email);
-    res.status(200).json({ success: true, data: user });
+    const user = await readUserByID(req.user.id);
+
+    res.status(200).json({
+      success: true,
+      data: user,
+    });
   },
 );
 
@@ -30,7 +32,7 @@ export const httpGetUserByID = catchAsync(
     res.status(200).json({ success: true, data: user });
   },
 );
-
+// With Better Auth, is this route redundant?
 export const httpCreateUser = catchAsync(
   async (req: Request, res: Response) => {
     const newUser: User = req.body;

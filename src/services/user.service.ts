@@ -2,7 +2,6 @@ import { NotFoundError } from "../utils/appError.ts";
 import {
   postUser,
   getAllUsers,
-  getUserByEmail,
   getUserByID,
   putUserByID,
   deleteUserByID,
@@ -21,14 +20,6 @@ export async function readUserByID(id: string) {
   const user = await getUserByID(id);
   if (!user) {
     throw new NotFoundError("User", id);
-  }
-  return user;
-}
-
-export async function readUser(email: string) {
-  const user = await getUserByEmail(email);
-  if (!user) {
-    throw new NotFoundError("User", email);
   }
   return user;
 }

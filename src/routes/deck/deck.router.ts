@@ -7,14 +7,25 @@ import {
   httpDeleteDeck,
 } from "./deck.controller.ts";
 import validationMiddleware from "../../middlewares/validationMiddleware.ts";
+import { authMiddleware } from "../../middlewares/authMiddleware.ts";
 import { CreateDeckSchema, UpdateDeckSchema } from "../../utils/deckSchema.ts";
 
 const deckRouter = express.Router();
 
-deckRouter.get("/", httpListDecks);
-deckRouter.get("/:id", httpGetDeck);
-deckRouter.post("/", validationMiddleware(CreateDeckSchema), httpCreateDeck);
-deckRouter.put("/:id", validationMiddleware(UpdateDeckSchema), httpUpdateDeck);
-deckRouter.delete("/:id", httpDeleteDeck);
+deckRouter.get("/", authMiddleware, httpListDecks);
+deckRouter.get("/:id", authMiddleware, httpGetDeck);
+deckRouter.post(
+  "/",
+  authMiddleware,
+  validationMiddleware(CreateDeckSchema),
+  httpCreateDeck,
+);
+deckRouter.put(
+  "/:id",
+  authMiddleware,
+  validationMiddleware(UpdateDeckSchema),
+  httpUpdateDeck,
+);
+deckRouter.delete("/:id", authMiddleware, httpDeleteDeck);
 
 export default deckRouter;

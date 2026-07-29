@@ -1,6 +1,5 @@
 import type { Request, Response } from "express";
 import { catchAsync } from "../../utils/catchAsync.ts";
-import { BadRequestError } from "../../utils/appError.ts";
 import {
   submitReview,
   listDueCards,
@@ -9,26 +8,22 @@ import {
 
 export const httpSubmitReview = catchAsync(
   async (req: Request, res: Response) => {
-    const result = await submitReview(req.body);
+    const result = await submitReview({ ...req.body, userId: req.user.id });
     res.status(201).json({ success: true, data: result });
   },
 );
 
 export const httpGetDueCards = catchAsync(
   async (req: Request, res: Response) => {
-    const { userId } = req.query;
-    if (!userId || typeof userId !== "string") {
-      throw new BadRequestError("userId query parameter is required");
-    }
-    const cards = await listDueCards(userId);
+    const cards = await listDueCards(req.user.id);
     res.status(200).json({ success: true, data: cards });
   },
 );
 
 export const httpGetProgress = catchAsync(
   async (req: Request, res: Response) => {
-    const { userId, cardId } = req.params;
-    const progress = await getProgress(userId, cardId);
+    const { cardId } = req.params;
+    const progress = await getProgress(req.user.id, cardId);
     res.status(200).json({ success: true, data: progress });
   },
 );

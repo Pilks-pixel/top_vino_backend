@@ -11,12 +11,14 @@ import reviewRouter from "../src/routes/review/review.router.ts";
 import { errorHandler } from "../src/middlewares/errorHandler.ts";
 
 var app = express();
-var corsOptions = {
-  origin: "http://localhost:3000",
-};
 
 app.all("/api/auth/{*any}", toNodeHandler(auth));
-app.use(cors(corsOptions));
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL ?? "http://localhost:3000",
+    credentials: true,
+  }),
+);
 app.use(morgan("combined"));
 app.use(express.json());
 

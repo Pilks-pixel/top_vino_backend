@@ -7,13 +7,6 @@ export async function getAllUsers() {
   return allUsers;
 }
 
-export async function getUserByEmail(email: string) {
-  const user = await prisma.user.findUnique({
-    where: { email },
-  });
-  return user;
-}
-
 export async function getUserByID(id: string) {
   const user = await prisma.user.findUnique({
     where: { id },
