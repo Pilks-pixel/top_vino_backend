@@ -22,13 +22,16 @@ export async function cleanDb(): Promise<void> {
   // Delete in reverse-dependency order to avoid FK violations
   await testPrisma.$executeRawUnsafe(
     `TRUNCATE TABLE
+      "account",
+      "session",
+      "verification",
       "UserCardReview",
       "UserResponse",
       "UserCardProgress",
       "Card",
       "DeckCollaborator",
       "Deck",
-      "User"
+      "user"
     RESTART IDENTITY CASCADE`,
   );
 }

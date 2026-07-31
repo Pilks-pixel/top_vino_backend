@@ -228,28 +228,40 @@
 
 ---
 
-### PHASE 3: Authentication & Authorization (2-3 days)
+### PHASE 3: Authentication & Authorization via Better Auth (2-3 days)
+
+Authentication is handled by [Better Auth](https://better-auth.com/) with the Prisma adapter. The frontend triggers sign-in/sign-up flows (email/password, Google, Apple); the backend validates Better Auth cookie-based sessions and enforces authorization decisions.
 
 #### Tasks:
 
-1. **Add Authentication**
+1. **Install & Configure Better Auth**
 
-   - Add password field to User model (migration)
-   - Install bcrypt for password hashing
-   - Install jsonwebtoken (JWT)
-   - Create `/auth/register` and `/auth/login` endpoints
-   - Implement JWT generation and validation
+   - Install `better-auth` and `@better-auth/prisma-adapter`
+   - Create `src/lib/auth.ts` — configure Prisma adapter (using custom output path `generated/prisma`), enable email/password, Google, and Apple providers
+   - Add required env vars: `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, and OAuth credentials
+   - Run `npx auth@latest generate` to append Better Auth models to `prisma/schema.prisma`, then `prisma migrate dev`
+   - Mount `toNodeHandler(auth)` in `src/app.ts` using Express v5 pattern (`/api/auth/{*any}`), **before** `express.json()`
 
-2. **Add Authorization Middleware**
+2. **Configure Session Management**
 
-   - Extract user from JWT token
-   - Protect routes requiring authentication
-   - Implement role-based access (FREE vs PRO features)
-   - Add ownership checks (users can only modify their data)
+   - Cookie-based sessions with 7-day expiry (Better Auth default)
+   - Enable cookie cache (5-minute `maxAge`) to avoid a DB read on every request
+   - Use `customSession` plugin to expose `subscriptionType` in session data for FREE vs PRO gating
+   - Configure CORS with `credentials: true` and an explicit `origin` for the frontend domain
 
-3. **Update Existing Endpoints**
-   - Add auth middleware to all protected routes
-   - Replace hardcoded user lookups with `req.user`
+3. **Add Authorization Middleware**
+
+   - `authMiddleware.ts` — resolves session via `auth.api.getSession({ headers: fromNodeHeaders(req.headers) })`, attaches `req.user`, returns 401 if unauthenticated
+   - `requireSubscription.ts` — gates PRO-only routes on `req.user.subscriptionType`
+   - `requireOwnership.ts` — enforces resource ownership by comparing `req.user.id` against the resource's `userId`
+   - `requireRole.ts` — checks deck collaborator roles
+
+4. **Protect Existing Endpoints**
+   - Apply `authMiddleware` to all Deck, Card, Review, and user-mutation routes
+   - Replace hardcoded `req.query.userId` references with `req.user.id`
+
+#### Future (Phase 6+):
+   - MFA, Passkeys, Admin roles, device management, audit logs
 
 ---
 

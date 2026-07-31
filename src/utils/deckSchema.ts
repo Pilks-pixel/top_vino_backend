@@ -1,13 +1,6 @@
 import * as z from "zod/v4";
 
 export const CreateDeckSchema = z.strictObject({
-  /**
-   * @todo: This will change when we implement authentication.
-   * We will get the userId from the authenticated session instead of the request body.
-   */
-  userId: z.uuid({
-    error: "Invalid userId",
-  }),
   name: z.string().min(1, "name is required").max(200),
   topic: z.string().max(200).optional(),
   isPublic: z.boolean().optional().default(false),

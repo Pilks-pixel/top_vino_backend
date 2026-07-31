@@ -8,8 +8,10 @@ import {
 } from "../model/deckModel.ts";
 import type { CreateDeckInput, UpdateDeckInput } from "../utils/deckSchema.ts";
 
-export async function listDecksForUser(userId: string) {
-  return getAllDecksForUser(userId);
+type CreateDeckData = CreateDeckInput & { userId: string };
+
+export async function listDecksForUser(userId: string, isPublic?: boolean) {
+  return getAllDecksForUser(userId, isPublic);
 }
 
 export async function getDeck(id: string) {
@@ -18,7 +20,7 @@ export async function getDeck(id: string) {
   return deck;
 }
 
-export async function createDeck(data: CreateDeckInput) {
+export async function createDeck(data: CreateDeckData) {
   return createDeckModel(data);
 }
 

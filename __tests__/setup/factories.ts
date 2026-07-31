@@ -7,7 +7,12 @@
  * Every factory accepts a partial override so tests can vary specific fields.
  */
 import { testPrisma } from "./testDb.js";
-import type { User, Deck, Card } from "../../generated/prisma/client.js";
+import type {
+  User,
+  Deck,
+  Card,
+  UserCardProgress,
+} from "../../generated/prisma/client.js";
 
 // ─── User ────────────────────────────────────────────────────────────────────
 
@@ -17,7 +22,7 @@ export async function createTestUser(
   overrides: Partial<{
     name: string;
     email: string;
-    subscription_type: "FREE" | "PRO";
+    subscriptionType: "FREE" | "PRO";
   }> = {},
 ): Promise<User> {
   userCounter++;
@@ -25,7 +30,7 @@ export async function createTestUser(
     data: {
       name: overrides.name ?? `Test User ${userCounter}`,
       email: overrides.email ?? `user${userCounter}@test.com`,
-      subscription_type: overrides.subscription_type ?? "FREE",
+      subscriptionType: overrides.subscriptionType ?? "FREE",
     },
   });
 }
@@ -73,6 +78,32 @@ export async function createTestCard(
       question: overrides.question ?? `Question ${cardCounter}?`,
       correctAnswer: overrides.correctAnswer ?? `Answer ${cardCounter}`,
       incorrectAnswers: [],
+    },
+  });
+}
+
+// ─── UserCardProgress ────────────────────────────────────────────────────────
+
+export async function createTestProgress(
+  userId: string,
+  cardId: string,
+  overrides: Partial<{
+    nextReviewAt: Date;
+    lastReviewedAt: Date;
+    easeFactor: number;
+    reviewCount: number;
+    correctStreak: number;
+  }> = {},
+): Promise<UserCardProgress> {
+  return testPrisma.userCardProgress.create({
+    data: {
+      userId,
+      cardId,
+      easeFactor: overrides.easeFactor ?? 2.5,
+      reviewCount: overrides.reviewCount ?? 1,
+      correctStreak: overrides.correctStreak ?? 0,
+      lastReviewedAt: overrides.lastReviewedAt ?? new Date(),
+      nextReviewAt: overrides.nextReviewAt ?? new Date(),
     },
   });
 }

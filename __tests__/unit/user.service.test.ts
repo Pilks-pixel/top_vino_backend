@@ -9,30 +9,17 @@ import { jest } from "@jest/globals";
 // Mock before importing the module under test
 jest.unstable_mockModule("../../src/model/usersModel.js", () => ({
   getAllUsers: jest.fn(),
-  getUserByEmail: jest.fn(),
   getUserByID: jest.fn(),
   postUser: jest.fn(),
   putUserByID: jest.fn(),
   deleteUserByID: jest.fn(),
 }));
 
-const {
-  getAllUsers,
-  getUserByEmail,
-  getUserByID,
-  postUser,
-  putUserByID,
-  deleteUserByID,
-} = await import("../../src/model/usersModel.js");
+const { getAllUsers, getUserByID, postUser, putUserByID, deleteUserByID } =
+  await import("../../src/model/usersModel.js");
 
-const {
-  readUsers,
-  readUser,
-  readUserByID,
-  createUser,
-  updateUser,
-  deleteUser,
-} = await import("../../src/services/user.service.js");
+const { readUsers, readUserByID, createUser, updateUser, deleteUser } =
+  await import("../../src/services/user.service.js");
 
 import { NotFoundError } from "../../src/utils/appError.js";
 
@@ -40,9 +27,11 @@ const mockUser = {
   id: "user-1",
   name: "Alice",
   email: "alice@test.com",
-  subscription_type: "FREE" as const,
+  subscriptionType: "FREE" as const,
   createdAt: new Date(),
   updatedAt: new Date(),
+  emailVerified: false,
+  image: null,
 };
 
 beforeEach(() => jest.clearAllMocks());
@@ -84,23 +73,6 @@ describe("readUserByID", () => {
   });
 });
 
-// ─── readUser (by email) ─────────────────────────────────────────────────────
-
-describe("readUser", () => {
-  it("returns user when found by email", async () => {
-    jest.mocked(getUserByEmail).mockResolvedValue(mockUser);
-    const result = await readUser("alice@test.com");
-    expect(result).toEqual(mockUser);
-  });
-
-  it("throws NotFoundError when email does not exist", async () => {
-    jest.mocked(getUserByEmail).mockResolvedValue(null);
-    await expect(readUser("nope@test.com")).rejects.toBeInstanceOf(
-      NotFoundError,
-    );
-  });
-});
-
 // ─── createUser ──────────────────────────────────────────────────────────────
 
 describe("createUser", () => {
@@ -109,7 +81,7 @@ describe("createUser", () => {
     const input = {
       name: "Alice",
       email: "alice@test.com",
-      subscription_type: "FREE" as const,
+      subscriptionType: "FREE" as const,
     };
     const result = await createUser(input);
     expect(result).toEqual(mockUser);
@@ -141,8 +113,6 @@ describe("updateUser", () => {
     expect(err.message).toContain("missing");
   });
 });
-
-// Do we need to Test for update failing - trying to update email to one that already exists? No, that is a validation error and should be tested in the controller test, not the service test.
 
 // ─── deleteUser ──────────────────────────────────────────────────────────────
 

@@ -1,9 +1,14 @@
 import prisma from "../lib/prisma.ts";
 import type { CreateDeckInput, UpdateDeckInput } from "../utils/deckSchema.ts";
 
-async function getAllDecksForUser(userId: string) {
+type CreateDeckData = CreateDeckInput & { userId: string };
+
+async function getAllDecksForUser(userId: string, isPublic?: boolean) {
   return prisma.deck.findMany({
-    where: { userId },
+    where: {
+      userId,
+      ...(isPublic !== undefined && { isPublic }),
+    },
     orderBy: { createdAt: "desc" },
   });
 }
@@ -12,7 +17,7 @@ async function getDeckByID(id: string) {
   return prisma.deck.findUnique({ where: { id } });
 }
 
-async function createDeck(data: CreateDeckInput) {
+async function createDeck(data: CreateDeckData) {
   return prisma.deck.create({ data });
 }
 

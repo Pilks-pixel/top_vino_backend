@@ -2,73 +2,51 @@
  * Integration tests: user routes
  *
  * Tests the full HTTP stack against a real test database.
- * Covers CRUD, validation, and error response shapes.
+ * Covers GET, authorized update/delete, validation, and error response shapes.
  */
 import * as dotenv from "dotenv";
 dotenv.config({ path: ".env.test" });
 
-import request from "supertest";
-import { app } from "../setup/testApp.js";
-import { cleanDb, disconnectDb } from "../setup/testDb.js";
-import { createTestUser } from "../setup/factories.js";
+import { jest } from "@jest/globals";
 
-beforeEach(async () => cleanDb());
-afterAll(async () => disconnectDb());
+// Mock auth BEFORE importing app
+jest.unstable_mockModule("../../src/lib/auth.js", () => ({
+  auth: {
+    api: { getSession: jest.fn() },
+    handler: jest.fn(),
+  },
+}));
 
-const validUser = {
-  name: "Test User",
-  email: "test@example.com",
-  subscription_type: "FREE",
-};
+const request = (await import("supertest")).default;
+const { auth } = await import("../../src/lib/auth.js");
+const { app } = await import("../setup/testApp.js");
+const { cleanDb, disconnectDb } = await import("../setup/testDb.js");
+const { createTestUser } = await import("../setup/factories.js");
 
-// ─── POST /user ───────────────────────────────────────────────────────────────
+let testUser: { id: string; email: string; subscriptionType: string };
 
-describe("POST /user", () => {
-  it("creates a user and returns 201 with success shape", async () => {
-    const res = await request(app).post("/user").send(validUser);
-    expect(res.status).toBe(201);
-    expect(res.body.success).toBe(true);
-    expect(res.body.data).toMatchObject({
-      email: validUser.email,
-      name: validUser.name,
-    });
-    expect(res.body.data.id).toBeDefined();
-    expect(res.body.data.passwordHash).toBeUndefined();
-  });
-
-  it("returns 409 on duplicate email", async () => {
-    await request(app).post("/user").send(validUser);
-    const res = await request(app).post("/user").send(validUser);
-    expect(res.status).toBe(409);
-    expect(res.body.success).toBe(false);
-    expect(res.body.status).toBe("error");
-  });
-
-  it("returns 400 with validation details on invalid payload", async () => {
-    const res = await request(app)
-      .post("/user")
-      .send({ name: "X", email: "not-an-email" });
-    expect(res.status).toBe(400);
-    expect(res.body.success).toBe(false);
-    expect(res.body.details).toBeDefined();
-    expect(res.body.details.properties.email).toBeDefined();
-    expect(res.body.details.properties.name).toBeDefined();
-  });
-
-  it("returns 400 when subscription_type is invalid", async () => {
-    const res = await request(app)
-      .post("/user")
-      .send({ ...validUser, subscription_type: "ENTERPRISE" });
-    expect(res.status).toBe(400);
-    expect(res.body.details.properties.subscription_type).toBeDefined();
+beforeEach(async () => {
+  await cleanDb();
+  testUser = await createTestUser();
+  (
+    auth.api.getSession as unknown as ReturnType<typeof jest.fn>
+  ).mockResolvedValue({
+    user: {
+      id: testUser.id,
+      email: testUser.email,
+      subscriptionType: "FREE",
+    },
+    session: {},
   });
 });
+
+afterAll(async () => disconnectDb());
 
 // ─── GET /user/:id ────────────────────────────────────────────────────────────
 
 describe("GET /user/:id", () => {
   it("returns user when found", async () => {
-    const user = await createTestUser();
+    const user = await createTestUser({ email: "get-user@test.com" });
     const res = await request(app).get(`/user/${user.id}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -86,44 +64,75 @@ describe("GET /user/:id", () => {
   });
 });
 
-// ─── GET /user/auth/:email ────────────────────────────────────────────────────
-
-describe("GET /user/auth/:email", () => {
-  it("returns user when found by email", async () => {
-    const user = await createTestUser({ email: "find@test.com" });
-    const res = await request(app).get(`/user/auth/${user.email}`);
-    expect(res.status).toBe(200);
-    expect(res.body.data.email).toBe(user.email);
-    expect(res.body.data.passwordHash).toBeUndefined();
-  });
-
-  it("returns 404 when email not found", async () => {
-    const res = await request(app).get("/user/auth/nobody@test.com");
-    expect(res.status).toBe(404);
-  });
-});
-
 // ─── PUT /user/:id ────────────────────────────────────────────────────────────
 
 describe("PUT /user/:id", () => {
   it("updates and returns the user", async () => {
-    const user = await createTestUser();
-    const res = await request(app).put(`/user/${user.id}`).send({
+    const res = await request(app).put(`/user/${testUser.id}`).send({
       name: "Updated Name",
-      email: user.email,
-      subscription_type: "PRO",
+      email: testUser.email,
+      subscriptionType: "PRO",
     });
     expect(res.status).toBe(200);
     expect(res.body.data.name).toBe("Updated Name");
-    expect(res.body.data.subscription_type).toBe("PRO");
+    expect(res.body.data.subscriptionType).toBe("PRO");
     expect(res.body.data.passwordHash).toBeUndefined();
   });
 
   it("returns 404 for non-existent user", async () => {
+    const missingUserId = "00000000-0000-0000-0000-000000000000";
+    (
+      auth.api.getSession as unknown as ReturnType<typeof jest.fn>
+    ).mockResolvedValueOnce({
+      user: {
+        id: missingUserId,
+        email: "missing@test.com",
+        subscriptionType: "FREE",
+      },
+      session: {},
+    });
+
     const res = await request(app)
-      .put("/user/00000000-0000-0000-0000-000000000000")
-      .send({ name: "XX", email: "x@x.com", subscription_type: "FREE" });
+      .put(`/user/${missingUserId}`)
+      .send({ name: "XX", email: "x@x.com", subscriptionType: "FREE" });
+
     expect(res.status).toBe(404);
+  });
+
+  it("returns 401 when unauthenticated", async () => {
+    (
+      auth.api.getSession as unknown as ReturnType<typeof jest.fn>
+    ).mockResolvedValueOnce(null);
+
+    const res = await request(app).put(`/user/${testUser.id}`).send({
+      name: "Updated Name",
+      email: testUser.email,
+      subscriptionType: "PRO",
+    });
+
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 when authenticated user does not own the target user", async () => {
+    const otherUser = await createTestUser({ email: "other-owner@test.com" });
+    (
+      auth.api.getSession as unknown as ReturnType<typeof jest.fn>
+    ).mockResolvedValueOnce({
+      user: {
+        id: otherUser.id,
+        email: otherUser.email,
+        subscriptionType: "FREE",
+      },
+      session: {},
+    });
+
+    const res = await request(app).put(`/user/${testUser.id}`).send({
+      name: "Updated Name",
+      email: testUser.email,
+      subscriptionType: "PRO",
+    });
+
+    expect(res.status).toBe(403);
   });
 });
 
@@ -131,16 +140,34 @@ describe("PUT /user/:id", () => {
 
 describe("DELETE /user/:id", () => {
   it("deletes user and returns success message", async () => {
-    const user = await createTestUser();
-    const res = await request(app).delete(`/user/${user.id}`);
+    const res = await request(app).delete(`/user/${testUser.id}`);
     expect(res.status).toBe(200);
     expect(res.body.message).toBe("User deleted successfully");
   });
 
+  it("returns 401 when unauthenticated", async () => {
+    (
+      auth.api.getSession as unknown as ReturnType<typeof jest.fn>
+    ).mockResolvedValueOnce(null);
+    const res = await request(app).delete(`/user/${testUser.id}`);
+    expect(res.status).toBe(401);
+  });
+
   it("returns 404 for non-existent user", async () => {
-    const res = await request(app).delete(
-      "/user/00000000-0000-0000-0000-000000000000",
-    );
+    const missingUserId = "00000000-0000-0000-0000-000000000000";
+    (
+      auth.api.getSession as unknown as ReturnType<typeof jest.fn>
+    ).mockResolvedValueOnce({
+      user: {
+        id: missingUserId,
+        email: "missing-delete@test.com",
+        subscriptionType: "FREE",
+      },
+      session: {},
+    });
+
+    const res = await request(app).delete(`/user/${missingUserId}`);
+
     expect(res.status).toBe(404);
   });
 });
