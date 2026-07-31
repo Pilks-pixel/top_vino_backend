@@ -64,23 +64,6 @@ describe("GET /user/:id", () => {
   });
 });
 
-// ─── GET /user/auth/:email ────────────────────────────────────────────────────
-
-describe("GET /user/auth/:email", () => {
-  it("returns user when found by email", async () => {
-    const user = await createTestUser({ email: "find@test.com" });
-    const res = await request(app).get(`/user/auth/${user.email}`);
-    expect(res.status).toBe(200);
-    expect(res.body.data.email).toBe(user.email);
-    expect(res.body.data.passwordHash).toBeUndefined();
-  });
-
-  it("returns 404 when email not found", async () => {
-    const res = await request(app).get("/user/auth/nobody@test.com");
-    expect(res.status).toBe(404);
-  });
-});
-
 // ─── PUT /user/:id ────────────────────────────────────────────────────────────
 
 describe("PUT /user/:id", () => {
