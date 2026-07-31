@@ -4,30 +4,54 @@
 import * as dotenv from "dotenv";
 dotenv.config({ path: ".env.test" });
 
-import request from "supertest";
-import { app } from "../setup/testApp.js";
-import { cleanDb, disconnectDb } from "../setup/testDb.js";
-import {
-  createTestUser,
-  createTestDeck,
-  createTestCard,
-} from "../setup/factories.js";
+import { jest } from "@jest/globals";
 
-beforeEach(async () => cleanDb());
+// Mock auth BEFORE importing app
+jest.unstable_mockModule("../../src/lib/auth.js", () => ({
+  auth: {
+    api: { getSession: jest.fn() },
+    handler: jest.fn(),
+  },
+}));
+
+const request = (await import("supertest")).default;
+const { auth } = await import("../../src/lib/auth.js");
+const { app } = await import("../setup/testApp.js");
+const { cleanDb, disconnectDb } = await import("../setup/testDb.js");
+const { createTestUser, createTestDeck, createTestCard, createTestProgress } =
+  await import("../setup/factories.js");
+
+let testUser: { id: string; email: string; subscriptionType: string };
+
+beforeEach(async () => {
+  await cleanDb();
+  testUser = await createTestUser();
+  (
+    auth.api.getSession as unknown as ReturnType<typeof jest.fn>
+  ).mockResolvedValue({
+    user: {
+      id: testUser.id,
+      email: testUser.email,
+      subscriptionType: "FREE",
+    },
+    session: {},
+  });
+});
+
 afterAll(async () => disconnectDb());
 
 // ─── POST /review ─────────────────────────────────────────────────────────────
 
 describe("POST /review", () => {
   it("creates a review and returns 201", async () => {
-    const user = await createTestUser();
-    const deck = await createTestDeck(user.id);
+    const deck = await createTestDeck(testUser.id);
     const card = await createTestCard(deck.id);
+
     const res = await request(app).post("/review").send({
-      userId: user.id,
       cardId: card.id,
       quality: 4,
     });
+
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.data.review).toBeDefined();
@@ -35,9 +59,7 @@ describe("POST /review", () => {
   });
 
   it("returns 404 when card does not exist", async () => {
-    const user = await createTestUser();
     const res = await request(app).post("/review").send({
-      userId: user.id,
       cardId: "00000000-0000-0000-0000-000000000000",
       quality: 3,
     });
@@ -45,14 +67,14 @@ describe("POST /review", () => {
   });
 
   it("returns 400 when quality is out of range", async () => {
-    const user = await createTestUser();
-    const deck = await createTestDeck(user.id);
+    const deck = await createTestDeck(testUser.id);
     const card = await createTestCard(deck.id);
+
     const res = await request(app).post("/review").send({
-      userId: user.id,
       cardId: card.id,
       quality: 10,
     });
+
     expect(res.status).toBe(400);
   });
 
@@ -60,56 +82,91 @@ describe("POST /review", () => {
     const res = await request(app).post("/review").send({ quality: 3 });
     expect(res.status).toBe(400);
   });
+
+  it("returns 401 when unauthenticated", async () => {
+    (
+      auth.api.getSession as unknown as ReturnType<typeof jest.fn>
+    ).mockResolvedValueOnce(null);
+
+    const res = await request(app).post("/review").send({
+      cardId: "00000000-0000-0000-0000-000000000000",
+      quality: 3,
+    });
+
+    expect(res.status).toBe(401);
+  });
 });
 
-// ─── GET /review/due?userId= ──────────────────────────────────────────────────
+// ─── GET /review/due ──────────────────────────────────────────────────────────
 
 describe("GET /review/due", () => {
-  it("returns due cards for a user", async () => {
-    const user = await createTestUser();
-    const deck = await createTestDeck(user.id);
-    // Why is createTestCard called twice?
-    await createTestCard(deck.id);
-    // Submit a review so progress exists
-    const card = await createTestCard(deck.id);
-    await request(app)
-      .post("/review")
-      .send({ userId: user.id, cardId: card.id, quality: 0 });
-    const res = await request(app).get(`/review/due?userId=${user.id}`);
+  it("returns only due cards when some are due and some are not", async () => {
+    const deck = await createTestDeck(testUser.id);
+    const dueCard = await createTestCard(deck.id);
+    const notDueCard = await createTestCard(deck.id);
+    await createTestCard(deck.id); // no progress record — never due
+
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await createTestProgress(testUser.id, dueCard.id, {
+      nextReviewAt: yesterday,
+    });
+    await createTestProgress(testUser.id, notDueCard.id, {
+      nextReviewAt: tomorrow,
+    });
+
+    const res = await request(app).get("/review/due");
+
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].id).toBe(dueCard.id);
   });
 
-  it("returns 400 when userId is missing", async () => {
+  it("returns 401 when unauthenticated", async () => {
+    (
+      auth.api.getSession as unknown as ReturnType<typeof jest.fn>
+    ).mockResolvedValueOnce(null);
+
     const res = await request(app).get("/review/due");
-    expect(res.status).toBe(400);
+
+    expect(res.status).toBe(401);
   });
 });
 
-// ─── GET /review/progress/:userId/:cardId ─────────────────────────────────────
+// ─── GET /review/progress/:cardId ─────────────────────────────────────────────
 
-describe("GET /review/progress/:userId/:cardId", () => {
+describe("GET /review/progress/:cardId", () => {
   it("returns progress for a user+card pair", async () => {
-    const user = await createTestUser();
-    const deck = await createTestDeck(user.id);
+    const deck = await createTestDeck(testUser.id);
     const card = await createTestCard(deck.id);
-    // Create progress by submitting a review
-    await request(app)
-      .post("/review")
-      .send({ userId: user.id, cardId: card.id, quality: 4 });
-    const res = await request(app).get(
-      `/review/progress/${user.id}/${card.id}`,
-    );
+
+    await request(app).post("/review").send({ cardId: card.id, quality: 4 });
+
+    const res = await request(app).get(`/review/progress/${card.id}`);
+
     expect(res.status).toBe(200);
-    expect(res.body.data.userId).toBe(user.id);
+    expect(res.body.data.userId).toBe(testUser.id);
     expect(res.body.data.cardId).toBe(card.id);
   });
 
   it("returns 404 when progress does not exist", async () => {
-    const user = await createTestUser();
     const res = await request(app).get(
-      `/review/progress/${user.id}/00000000-0000-0000-0000-000000000000`,
+      "/review/progress/00000000-0000-0000-0000-000000000000",
     );
+
     expect(res.status).toBe(404);
+  });
+
+  it("returns 401 when unauthenticated", async () => {
+    const deck = await createTestDeck(testUser.id);
+    const card = await createTestCard(deck.id);
+    (
+      auth.api.getSession as unknown as ReturnType<typeof jest.fn>
+    ).mockResolvedValueOnce(null);
+
+    const res = await request(app).get(`/review/progress/${card.id}`);
+
+    expect(res.status).toBe(401);
   });
 });

@@ -46,7 +46,7 @@ describe("listDecksForUser", () => {
     jest.mocked(getAllDecksForUser).mockResolvedValue([mockDeck]);
     const result = await listDecksForUser("user-1");
     expect(result).toEqual([mockDeck]);
-    expect(getAllDecksForUser).toHaveBeenCalledWith("user-1");
+    expect(getAllDecksForUser).toHaveBeenCalledWith("user-1", undefined);
   });
 
   it("returns empty array when user has no decks", async () => {
