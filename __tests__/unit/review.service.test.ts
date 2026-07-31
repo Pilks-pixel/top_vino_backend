@@ -91,6 +91,163 @@ describe("submitReview", () => {
     expect(upsertCardProgress).toHaveBeenCalled();
   });
 
+  it("Case A - bootstrap first success sets interval to 1", async () => {
+    const progress = {
+      ...mockProgress,
+      reviewCount: 0,
+      currentInterval: 1,
+      correctStreak: 0,
+      easeFactor: 2.5,
+    };
+    jest.mocked(getCardByID).mockResolvedValue(mockCard);
+    jest.mocked(getCardProgress).mockResolvedValue(progress);
+    jest.mocked(createReview).mockResolvedValue(mockReview);
+    jest
+      .mocked(upsertCardProgress)
+      .mockResolvedValue({ ...progress, reviewCount: 1, correctStreak: 1 });
+
+    await submitReview({
+      userId: "user-1",
+      cardId: "card-1",
+      quality: 4,
+    });
+
+    expect(upsertCardProgress).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reviewCount: 1,
+        currentInterval: 1,
+        correctStreak: 1,
+        easeFactor: 2.5,
+      }),
+    );
+  });
+
+  it("Case B - bootstrap second success sets interval to 6", async () => {
+    const progress = {
+      ...mockProgress,
+      reviewCount: 1,
+      currentInterval: 1,
+      correctStreak: 1,
+      easeFactor: 2.5,
+    };
+    jest.mocked(getCardByID).mockResolvedValue(mockCard);
+    jest.mocked(getCardProgress).mockResolvedValue(progress);
+    jest.mocked(createReview).mockResolvedValue(mockReview);
+    jest
+      .mocked(upsertCardProgress)
+      .mockResolvedValue({ ...progress, reviewCount: 2, correctStreak: 2 });
+
+    await submitReview({
+      userId: "user-1",
+      cardId: "card-1",
+      quality: 4,
+    });
+
+    expect(upsertCardProgress).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reviewCount: 2,
+        currentInterval: 6,
+        correctStreak: 2,
+        easeFactor: 2.5,
+      }),
+    );
+  });
+
+  it("Case C - steady-state fourth review uses previous interval", async () => {
+    const progress = {
+      ...mockProgress,
+      reviewCount: 3,
+      currentInterval: 15,
+      correctStreak: 3,
+      easeFactor: 2.5,
+    };
+    jest.mocked(getCardByID).mockResolvedValue(mockCard);
+    jest.mocked(getCardProgress).mockResolvedValue(progress);
+    jest.mocked(createReview).mockResolvedValue(mockReview);
+    jest
+      .mocked(upsertCardProgress)
+      .mockResolvedValue({ ...progress, reviewCount: 4, correctStreak: 4 });
+
+    await submitReview({
+      userId: "user-1",
+      cardId: "card-1",
+      quality: 4,
+    });
+
+    expect(upsertCardProgress).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reviewCount: 4,
+        currentInterval: 38,
+        correctStreak: 4,
+        easeFactor: 2.5,
+      }),
+    );
+  });
+
+  it("Case D - failure resets reviewCount and currentInterval", async () => {
+    const progress = {
+      ...mockProgress,
+      reviewCount: 3,
+      currentInterval: 15,
+      correctStreak: 3,
+      easeFactor: 2.5,
+    };
+    jest.mocked(getCardByID).mockResolvedValue(mockCard);
+    jest.mocked(getCardProgress).mockResolvedValue(progress);
+    jest.mocked(createReview).mockResolvedValue(mockReview);
+    jest.mocked(upsertCardProgress).mockResolvedValue({
+      ...progress,
+      reviewCount: 0,
+      correctStreak: 0,
+      currentInterval: 1,
+      easeFactor: 2.18,
+    });
+
+    await submitReview({
+      userId: "user-1",
+      cardId: "card-1",
+      quality: 2,
+    });
+
+    expect(upsertCardProgress).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reviewCount: 0,
+        currentInterval: 1,
+        correctStreak: 0,
+        easeFactor: expect.closeTo(2.18, 5),
+      }),
+    );
+  });
+
+  it("Case E - EF floor clamps to 1.3", async () => {
+    const progress = {
+      ...mockProgress,
+      reviewCount: 0,
+      currentInterval: 1,
+      correctStreak: 0,
+      easeFactor: 1.5,
+    };
+    jest.mocked(getCardByID).mockResolvedValue(mockCard);
+    jest.mocked(getCardProgress).mockResolvedValue(progress);
+    jest.mocked(createReview).mockResolvedValue(mockReview);
+    jest.mocked(upsertCardProgress).mockResolvedValue({
+      ...progress,
+      easeFactor: 1.3,
+    });
+
+    await submitReview({
+      userId: "user-1",
+      cardId: "card-1",
+      quality: 0,
+    });
+
+    expect(upsertCardProgress).toHaveBeenCalledWith(
+      expect.objectContaining({
+        easeFactor: 1.3,
+      }),
+    );
+  });
+
   it("throws NotFoundError when card does not exist", async () => {
     jest.mocked(getCardByID).mockResolvedValue(null);
     await expect(

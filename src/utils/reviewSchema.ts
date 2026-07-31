@@ -14,10 +14,12 @@ export const ProgressUpsertSchema = z.object({
   easeFactor: z.number().min(0),
   reviewCount: z.number().min(0),
   correctStreak: z.number().min(0),
+  currentInterval: z.number().int().min(1),
   lastReviewedAt: z.date(),
   nextReviewAt: z.date(),
 });
 
+// used for validating review submission input, not the actual review record
 export const SubmitReviewSchema = z.object({
   cardId: z.string().min(1, "cardId is required"),
   quality: z.number().int().min(0).max(5),
