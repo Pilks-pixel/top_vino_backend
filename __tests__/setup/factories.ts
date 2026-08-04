@@ -7,6 +7,7 @@
  * Every factory accepts a partial override so tests can vary specific fields.
  */
 import { testPrisma } from "./testDb.js";
+import { randomUUID } from "node:crypto";
 import type {
   User,
   Deck,
@@ -16,8 +17,6 @@ import type {
 
 // ─── User ────────────────────────────────────────────────────────────────────
 
-let userCounter = 0;
-
 export async function createTestUser(
   overrides: Partial<{
     name: string;
@@ -25,19 +24,16 @@ export async function createTestUser(
     subscriptionType: "FREE" | "PRO";
   }> = {},
 ): Promise<User> {
-  userCounter++;
   return testPrisma.user.create({
     data: {
-      name: overrides.name ?? `Test User ${userCounter}`,
-      email: overrides.email ?? `user${userCounter}@test.com`,
+      name: overrides.name ?? `Test User ${randomUUID().slice(0, 8)}`,
+      email: overrides.email ?? `user-${randomUUID()}@test.com`,
       subscriptionType: overrides.subscriptionType ?? "FREE",
     },
   });
 }
 
 // ─── Deck ────────────────────────────────────────────────────────────────────
-
-let deckCounter = 0;
 
 export async function createTestDeck(
   userId: string,
@@ -47,11 +43,10 @@ export async function createTestDeck(
     isPublic: boolean;
   }> = {},
 ): Promise<Deck> {
-  deckCounter++;
   return testPrisma.deck.create({
     data: {
       userId,
-      name: overrides.name ?? `Test Deck ${deckCounter}`,
+      name: overrides.name ?? `Test Deck ${randomUUID().slice(0, 8)}`,
       topic: overrides.topic ?? "general",
       isPublic: overrides.isPublic ?? false,
     },
@@ -59,8 +54,6 @@ export async function createTestDeck(
 }
 
 // ─── Card ────────────────────────────────────────────────────────────────────
-
-let cardCounter = 0;
 
 export async function createTestCard(
   deckId: string,
@@ -70,13 +63,13 @@ export async function createTestCard(
     correctAnswer: string;
   }> = {},
 ): Promise<Card> {
-  cardCounter++;
   return testPrisma.card.create({
     data: {
       deckId,
       type: overrides.type ?? "basic",
-      question: overrides.question ?? `Question ${cardCounter}?`,
-      correctAnswer: overrides.correctAnswer ?? `Answer ${cardCounter}`,
+      question: overrides.question ?? `Question ${randomUUID().slice(0, 8)}?`,
+      correctAnswer:
+        overrides.correctAnswer ?? `Answer ${randomUUID().slice(0, 8)}`,
       incorrectAnswers: [],
     },
   });
