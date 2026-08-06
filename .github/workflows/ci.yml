@@ -2,12 +2,12 @@ name: CI
 
 on:
     push:
-    branches:
+      branches:
       - main
       - feat/phase-5-security
 
     pull_request:
-    branches:
+      branches:
       - main
 
 jobs:
