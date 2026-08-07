@@ -1,15 +1,13 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { customSession } from "better-auth/plugins";
-import { PrismaClient } from "../../generated/prisma/index.js";
+import prisma from "./prisma.js";
 
 type BetterAuthResponseContext = {
   context: {
     returned?: Response;
   };
 };
-
-const prisma = new PrismaClient();
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {

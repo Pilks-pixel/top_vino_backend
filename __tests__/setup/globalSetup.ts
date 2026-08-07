@@ -16,10 +16,20 @@ export default async function globalSetup() {
   dotenv.config({ path: ".env.test" });
 
   const TEST_DB = "top_vino_test";
-  const adminUrl = "postgresql://pete:hello_you@localhost:5432/postgres";
+  const configuredDatabaseUrl = process.env.DATABASE_URL;
+  if (!configuredDatabaseUrl) {
+    throw new Error(
+      "[globalSetup] DATABASE_URL must be set to connect to PostgreSQL.",
+    );
+  }
+
+  const adminDatabaseUrl = new URL(configuredDatabaseUrl);
+  adminDatabaseUrl.pathname = "/postgres";
+  const testDatabaseUrl = new URL(configuredDatabaseUrl);
+  testDatabaseUrl.pathname = `/${TEST_DB}`;
 
   // 1. Create test database if it doesn't exist
-  const client = new Client({ connectionString: adminUrl });
+  const client = new Client({ connectionString: adminDatabaseUrl.toString() });
   try {
     await client.connect();
   } catch (err) {
@@ -50,7 +60,7 @@ export default async function globalSetup() {
   execSync("npx prisma migrate deploy", {
     env: {
       ...process.env,
-      DATABASE_URL: `postgresql://pete:hello_you@localhost:5432/${TEST_DB}`,
+      DATABASE_URL: testDatabaseUrl.toString(),
     },
     stdio: "inherit",
   });
