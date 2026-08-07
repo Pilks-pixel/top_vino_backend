@@ -14,6 +14,29 @@ jobs:
   quality:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/top_vino_test
+      BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+      BETTER_AUTH_URL: http://localhost:8000
+      NODE_ENV: test
+      PORT: 8000
+      FRONTEND_URL: http://localhost:3000
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -33,3 +56,6 @@ jobs:
 
       - name: Check Types
         run: npm run check-types
+
+      - name: Test
+        run: npm test
