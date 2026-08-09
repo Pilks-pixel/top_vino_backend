@@ -10,16 +10,17 @@ import { jest } from "@jest/globals";
 jest.unstable_mockModule("../../src/model/usersModel.js", () => ({
   getAllUsers: jest.fn(),
   getUserByID: jest.fn(),
-  postUser: jest.fn(),
   putUserByID: jest.fn(),
   deleteUserByID: jest.fn(),
 }));
 
-const { getAllUsers, getUserByID, postUser, putUserByID, deleteUserByID } =
-  await import("../../src/model/usersModel.js");
+const { getAllUsers, getUserByID, putUserByID, deleteUserByID } = await import(
+  "../../src/model/usersModel.js"
+);
 
-const { readUsers, readUserByID, createUser, updateUser, deleteUser } =
-  await import("../../src/services/user.service.js");
+const { readUsers, readUserByID, updateUser, deleteUser } = await import(
+  "../../src/services/user.service.js"
+);
 
 import { NotFoundError } from "../../src/utils/appError.js";
 
@@ -70,22 +71,6 @@ describe("readUserByID", () => {
     jest.mocked(getUserByID).mockResolvedValue(null);
     const err = await readUserByID("missing").catch(e => e);
     expect(err.message).toContain("missing");
-  });
-});
-
-// ─── createUser ──────────────────────────────────────────────────────────────
-
-describe("createUser", () => {
-  it("creates and returns the new user", async () => {
-    jest.mocked(postUser).mockResolvedValue(mockUser);
-    const input = {
-      name: "Alice",
-      email: "alice@test.com",
-      subscriptionType: "FREE" as const,
-    };
-    const result = await createUser(input);
-    expect(result).toEqual(mockUser);
-    expect(postUser).toHaveBeenCalledWith(input);
   });
 });
 

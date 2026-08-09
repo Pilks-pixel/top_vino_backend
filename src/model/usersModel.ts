@@ -14,13 +14,6 @@ export async function getUserByID(id: string) {
   return user;
 }
 
-export async function postUser(user: User) {
-  const result = await prisma.user.create({
-    data: user,
-  });
-  return result;
-}
-
 export async function putUserByID(id: string, data: Partial<User>) {
   const user = await prisma.user.update({
     where: { id },
