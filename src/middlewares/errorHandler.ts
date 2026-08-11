@@ -21,11 +21,15 @@ interface ErrorResponse {
  */
 const isDevelopment = process.env.NODE_ENV !== "production";
 
-function logError(err: Error, isOperational: boolean): void {
+function logError(
+  err: Error,
+  isOperational: boolean,
+  applicationLogger: typeof logger,
+): void {
   if (isOperational) {
-    logger.warn({ err }, err.message);
+    applicationLogger.warn({ err }, err.message);
   } else {
-    logger.error({ err }, "Unhandled error");
+    applicationLogger.error({ err }, "Unhandled error");
   }
 }
 
@@ -69,11 +73,12 @@ function createErrorResponse(
  * - Development: includes stack traces
  * - Production: sanitizes error messages
  */
-export function errorHandler(
+function handleError(
   err: Error,
   _req: Request,
   res: Response,
   _next: NextFunction,
+  applicationLogger: typeof logger,
 ): void {
   let error: AppError;
 
@@ -101,9 +106,22 @@ export function errorHandler(
   }
 
   // Log the error
-  logError(error, error.isOperational);
+  logError(error, error.isOperational, applicationLogger);
 
   // Send response
   const response = createErrorResponse(error, isDevelopment);
   res.status(response.statusCode).json(response);
 }
+
+export function createErrorHandler(applicationLogger = logger) {
+  return function errorHandler(
+    err: Error,
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): void {
+    handleError(err, req, res, next, applicationLogger);
+  };
+}
+
+export const errorHandler = createErrorHandler();

@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { customSession } from "better-auth/plugins";
+import { logger } from "./logger.js";
 import prisma from "./prisma.js";
 
 type BetterAuthResponseContext = {
@@ -46,7 +47,7 @@ export const auth = betterAuth({
   onAPIError: {
     onError: (error, ctx) => {
       const apiError = error as { message: string; status?: number };
-      console.error("[AUTH ERROR]", apiError.message);
+      logger.error({ statusCode: apiError.status ?? 500 }, "[AUTH ERROR]");
       const authCtx = ctx as unknown as BetterAuthResponseContext;
 
       authCtx.context.returned = new Response(

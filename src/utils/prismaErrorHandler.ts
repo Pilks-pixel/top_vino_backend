@@ -5,6 +5,7 @@ import {
   ConflictError,
   NotFoundError,
 } from "./appError.ts";
+import { logger } from "../lib/logger.ts";
 
 /**
  * Checks if an error is a Prisma known request error
@@ -94,7 +95,10 @@ export function handlePrismaError(
 
     // Default: return generic server error
     default: {
-      console.error(`Unhandled Prisma error code: ${error.code}`, error);
+      logger.error(
+        { err: error },
+        `Unhandled Prisma error code: ${error.code}`,
+      );
       return new AppError("Database operation failed", 500);
     }
   }

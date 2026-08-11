@@ -1,6 +1,7 @@
 import * as z from "zod/v4";
 
 import type { Request, Response, NextFunction } from "express";
+import { logger } from "../lib/logger.ts";
 import { ValidationError } from "../utils/appError.ts";
 
 /**
@@ -15,7 +16,7 @@ function validationMiddleware(schema: z.ZodType) {
 
     if (!result.success) {
       const formattedErrors = z.treeifyError(result.error);
-      console.log(formattedErrors);
+      logger.warn({ validation: formattedErrors }, "Request validation failed");
       throw new ValidationError("Validation failed", formattedErrors);
     }
 
