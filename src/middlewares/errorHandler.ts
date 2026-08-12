@@ -24,12 +24,12 @@ const isDevelopment = process.env.NODE_ENV !== "production";
 function logError(
   err: Error,
   isOperational: boolean,
-  applicationLogger: typeof logger,
+  requestLogger: typeof logger,
 ): void {
   if (isOperational) {
-    applicationLogger.warn({ err }, err.message);
+    requestLogger.warn({ err }, err.message);
   } else {
-    applicationLogger.error({ err }, "Unhandled error");
+    requestLogger.error({ err }, "Unhandled error");
   }
 }
 
@@ -75,7 +75,7 @@ function createErrorResponse(
  */
 function handleError(
   err: Error,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction,
   applicationLogger: typeof logger,
@@ -106,7 +106,7 @@ function handleError(
   }
 
   // Log the error
-  logError(error, error.isOperational, applicationLogger);
+  logError(error, error.isOperational, req.log ?? applicationLogger);
 
   // Send response
   const response = createErrorResponse(error, isDevelopment);

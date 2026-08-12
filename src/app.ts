@@ -1,4 +1,6 @@
 import express from "express";
+import { randomUUID } from "node:crypto";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import cors from "cors";
 import { pinoHttp } from "pino-http";
 import helmet from "helmet";
@@ -14,12 +16,36 @@ import reviewRouter from "./routes/review/review.router.ts";
 import { createErrorHandler } from "./middlewares/errorHandler.ts";
 import { authLimiter, generalLimiter } from "./config/rateLimits.ts";
 
+const REQUEST_ID_HEADER = "x-request-id";
+const MAX_REQUEST_ID_LENGTH = 128;
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9._~:/-]+$/;
+
+function isValidRequestId(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= MAX_REQUEST_ID_LENGTH &&
+    REQUEST_ID_PATTERN.test(value)
+  );
+}
+
+function generateRequestId(req: IncomingMessage, res: ServerResponse): string {
+  const inboundRequestId = req.headers[REQUEST_ID_HEADER];
+  const requestId = isValidRequestId(inboundRequestId)
+    ? inboundRequestId
+    : randomUUID();
+
+  res.setHeader("X-Request-Id", requestId);
+  return requestId;
+}
+
 export function createApp(applicationLogger = logger) {
   const app = express();
 
   app.use(
     pinoHttp({
       logger: applicationLogger,
+      genReqId: generateRequestId,
       serializers: {
         req: serializeRequest,
         res: serializeResponse,

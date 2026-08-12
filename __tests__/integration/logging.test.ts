@@ -22,7 +22,9 @@ const app = createApp(
 );
 
 type HttpLog = {
+  msg?: string;
   req?: {
+    id?: string;
     method?: string;
     url?: string;
     headers?: Record<string, unknown>;
@@ -38,6 +40,69 @@ function loggedRequests(): HttpLog[] {
 describe("automatic HTTP logging", () => {
   beforeEach(() => {
     output.length = 0;
+  });
+
+  it("preserves a valid request ID in the response and request log", async () => {
+    const response = await request(app)
+      .get("/health")
+      .set("X-Request-Id", "client-request-123");
+
+    expect(response.headers["x-request-id"]).toBe("client-request-123");
+
+    const requestLog = loggedRequests().find(
+      log => log.req?.method === "GET" && log.req.url === "/health",
+    );
+    expect(requestLog?.req?.id).toBe("client-request-123");
+  });
+
+  it("generates a request ID when the client does not provide one", async () => {
+    const response = await request(app).get("/health");
+    const requestId = response.headers["x-request-id"] as string;
+
+    expect(requestId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+
+    const requestLog = loggedRequests().find(
+      log => log.req?.method === "GET" && log.req.url === "/health",
+    );
+    expect(requestLog?.req?.id).toBe(requestId);
+  });
+
+  it("replaces an invalid inbound request ID", async () => {
+    const invalidRequestId = "client request id";
+    const response = await request(app)
+      .get("/health")
+      .set("X-Request-Id", invalidRequestId);
+    const requestId = response.headers["x-request-id"] as string;
+
+    expect(requestId).not.toBe(invalidRequestId);
+    expect(requestId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+
+    const requestLog = loggedRequests().find(
+      log => log.req?.method === "GET" && log.req.url === "/health",
+    );
+    expect(requestLog?.req?.id).toBe(requestId);
+  });
+
+  it("replaces an oversized inbound request ID", async () => {
+    const oversizedRequestId = "a".repeat(129);
+    const response = await request(app)
+      .get("/health")
+      .set("X-Request-Id", oversizedRequestId);
+    const requestId = response.headers["x-request-id"] as string;
+
+    expect(requestId).not.toBe(oversizedRequestId);
+    expect(requestId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+
+    const requestLog = loggedRequests().find(
+      log => log.req?.method === "GET" && log.req.url === "/health",
+    );
+    expect(requestLog?.req?.id).toBe(requestId);
   });
 
   it("logs safe request metadata without bodies, queries, or credentials", async () => {
@@ -109,11 +174,18 @@ describe("automatic HTTP logging", () => {
   });
 
   it("uses the protected logger for request errors", async () => {
+    const requestId = "error-request-123";
     await request(app)
       .get("/deck")
+      .set("X-Request-Id", requestId)
       .set("Authorization", "Bearer error-header-secret");
 
     expect(output.join("")).toContain("Not authenticated");
     expect(output.join("")).not.toContain("error-header-secret");
+
+    const errorLog = loggedRequests().find(
+      log => log.msg === "Not authenticated",
+    );
+    expect(errorLog?.req?.id).toBe(requestId);
   });
 });
