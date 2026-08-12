@@ -1,7 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { customSession } from "better-auth/plugins";
-import { logger } from "./logger.js";
 import prisma from "./prisma.js";
 
 type BetterAuthResponseContext = {
@@ -10,10 +9,29 @@ type BetterAuthResponseContext = {
   };
 };
 
+function resolveAuthStatusCode(error: {
+  statusCode?: unknown;
+  status?: unknown;
+}): number {
+  for (const candidate of [error.statusCode, error.status]) {
+    if (
+      typeof candidate === "number" &&
+      Number.isInteger(candidate) &&
+      candidate >= 400 &&
+      candidate <= 599
+    ) {
+      return candidate;
+    }
+  }
+
+  return 500;
+}
+
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
+  logger: { disabled: true },
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
   emailAndPassword: {
@@ -46,19 +64,27 @@ export const auth = betterAuth({
   ],
   onAPIError: {
     onError: (error, ctx) => {
-      const apiError = error as { message: string; status?: number };
-      logger.error({ statusCode: apiError.status ?? 500 }, "[AUTH ERROR]");
+      const apiError = error as {
+        message?: unknown;
+        statusCode?: unknown;
+        status?: unknown;
+      };
+      const statusCode = resolveAuthStatusCode(apiError);
+      const message =
+        typeof apiError.message === "string"
+          ? apiError.message
+          : "Authentication failed";
       const authCtx = ctx as unknown as BetterAuthResponseContext;
 
       authCtx.context.returned = new Response(
         JSON.stringify({
           success: false,
           status: "error",
-          statusCode: apiError.status ?? 500,
-          message: apiError.message,
+          statusCode,
+          message,
         }),
         {
-          status: apiError.status ?? 500,
+          status: statusCode,
           headers: { "Content-Type": "application/json" },
         },
       );

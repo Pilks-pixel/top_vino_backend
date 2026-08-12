@@ -5,7 +5,17 @@ import {
   ConflictError,
   NotFoundError,
 } from "./appError.ts";
-import { logger } from "../lib/logger.ts";
+
+const EXPECTED_PRISMA_ERROR_CODES = new Set([
+  "P2000",
+  "P2001",
+  "P2002",
+  "P2003",
+  "P2011",
+  "P2014",
+  "P2016",
+  "P2025",
+]);
 
 /**
  * Checks if an error is a Prisma known request error
@@ -23,6 +33,47 @@ export function isPrismaValidationError(
   error: unknown,
 ): error is Prisma.PrismaClientValidationError {
   return error instanceof Prisma.PrismaClientValidationError;
+}
+
+export function isExpectedPrismaError(
+  error: Prisma.PrismaClientKnownRequestError,
+): boolean {
+  return EXPECTED_PRISMA_ERROR_CODES.has(error.code);
+}
+
+export function getPrismaErrorLogMetadata(
+  error: Prisma.PrismaClientKnownRequestError,
+): Record<string, unknown> {
+  const metadata: Record<string, unknown> = { errorCode: error.code };
+  const meta = error.meta;
+
+  if (!meta || typeof meta !== "object" || Array.isArray(meta)) {
+    return metadata;
+  }
+
+  const target = meta.target;
+  if (Array.isArray(target)) {
+    const fields = target.filter(
+      (field): field is string => typeof field === "string",
+    );
+    if (fields.length > 0) metadata.fields = fields;
+  } else if (typeof target === "string") {
+    metadata.field = target;
+  }
+
+  for (const fieldName of [
+    "field_name",
+    "relation_name",
+    "constraint",
+    "column_name",
+  ]) {
+    const fieldValue = meta[fieldName];
+    if (typeof fieldValue === "string") {
+      metadata[fieldName] = fieldValue;
+    }
+  }
+
+  return metadata;
 }
 
 /**
@@ -95,11 +146,9 @@ export function handlePrismaError(
 
     // Default: return generic server error
     default: {
-      logger.error(
-        { err: error },
-        `Unhandled Prisma error code: ${error.code}`,
-      );
-      return new AppError("Database operation failed", 500);
+      const appError = new AppError("Database operation failed", 500);
+      appError.isOperational = false;
+      return appError;
     }
   }
 }

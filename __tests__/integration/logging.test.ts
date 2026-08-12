@@ -22,7 +22,12 @@ const app = createApp(
 );
 
 type HttpLog = {
+  level?: number;
   msg?: string;
+  event?: string;
+  route?: string;
+  statusCode?: number;
+  requestId?: string;
   req?: {
     id?: string;
     method?: string;
@@ -158,18 +163,38 @@ describe("automatic HTTP logging", () => {
     const consoleError = jest
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
+    const consoleWarn = jest
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined);
 
     try {
-      const response = await request(app).post("/api/auth/sign-in/email").send({
-        email: "missing@example.com",
-        password: "auth-password-secret",
-      });
+      const requestId = "auth-failure-request-123";
+      const response = await request(app)
+        .post("/api/auth/sign-in/email")
+        .set("X-Request-Id", requestId)
+        .send({
+          email: "missing@example.com",
+          password: "auth-password-secret",
+        });
 
-      expect(response.status).toBeGreaterThanOrEqual(400);
+      expect(response.status).toBe(401);
       expect(consoleError).not.toHaveBeenCalled();
+      expect(consoleWarn).not.toHaveBeenCalled();
       expect(output.join("")).not.toContain("auth-password-secret");
+
+      expect(loggedRequests()).toContainEqual(
+        expect.objectContaining({
+          level: 40,
+          event: "authentication_failure",
+          route: "/api/auth/sign-in/email",
+          statusCode: response.status,
+          requestId,
+          req: expect.objectContaining({ id: requestId }),
+        }),
+      );
     } finally {
       consoleError.mockRestore();
+      consoleWarn.mockRestore();
     }
   });
 

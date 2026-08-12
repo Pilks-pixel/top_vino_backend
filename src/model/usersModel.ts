@@ -4,7 +4,10 @@ import type { User } from "../utils/userSchema.ts";
 
 export async function getAllUsers() {
   const allUsers = await prisma.user.findMany();
-  logger.debug({ users: allUsers }, "Fetched users");
+  logger.debug(
+    { event: "users_fetched", count: allUsers.length },
+    "Fetched users",
+  );
   return allUsers;
 }
 
