@@ -54,9 +54,11 @@ const SENSITIVE_FIELD_NAMES = [
   "xapikey",
 ] as const;
 
-// Redaction paths cover the sensitive field names at every nesting depth
-// the app logs, plus the credential-bearing HTTP headers that appear on
-// serialized requests.
+/**
+ * Redaction paths cover the sensitive field names at every nesting depth
+ * the app logs, plus the credential-bearing HTTP headers that appear on
+ * serialized requests.
+ */
 export const DEFAULT_REDACT_PATHS: string[] = [
   ...SENSITIVE_FIELD_NAMES.flatMap(field => [
     field,
@@ -99,10 +101,11 @@ export interface LoggerOptions {
   logLevel?: string;
   destination?: pino.DestinationStream;
 }
-
-// Serializes the safe subset of a request: method, path without the query
-// string, redacted headers, and connection metadata. Request bodies and raw
-// query strings never appear in automatic logs.
+/**
+ * Serializes the safe subset of a request: method, path without the query
+ * string, redacted headers, and connection metadata. Request bodies and raw
+ * query strings never appear in automatic logs.
+ */
 export function serializeRequest(
   request: pino.SerializedRequest,
 ): Record<string, unknown> {
