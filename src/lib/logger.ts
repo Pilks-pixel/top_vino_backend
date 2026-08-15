@@ -1,36 +1,81 @@
 import pino from "pino";
 
 const REDACTED_VALUE = "[Redacted]";
-const SENSITIVE_FIELDS = new Set([
+
+const SENSITIVE_FIELD_NAMES = [
+  "accessKey",
   "accesskey",
+  "accessToken",
   "accesstoken",
+  "apiKey",
   "apikey",
   "authorization",
+  "clientSecret",
   "clientsecret",
   "cookie",
   "credential",
   "credentials",
+  "csrfToken",
   "csrftoken",
+  "currentPassword",
   "currentpassword",
+  "idToken",
   "idtoken",
   "jwt",
+  "newPassword",
   "newpassword",
+  "oneTimeCode",
   "onetimecode",
   "password",
+  "passwordConfirmation",
   "passwordconfirmation",
+  "passwordHash",
   "passwordhash",
+  "privateKey",
   "privatekey",
+  "proxyAuthorization",
   "proxyauthorization",
+  "refreshToken",
   "refreshtoken",
   "secret",
+  "secretKey",
   "secretkey",
+  "sessionToken",
   "sessiontoken",
+  "setCookie",
   "setcookie",
   "token",
   "totp",
+  "verificationCode",
   "verificationcode",
+  "xApiKey",
   "xapikey",
-]);
+] as const;
+
+export const DEFAULT_REDACT_PATHS: string[] = [
+  ...SENSITIVE_FIELD_NAMES.flatMap(field => [
+    field,
+    `*.${field}`,
+    `*.*.${field}`,
+    `*.*.*.${field}`,
+    `*[*].${field}`,
+    `*.*[*].${field}`,
+    `req.headers.${field}`,
+    `headers.${field}`,
+    `req.headers["${field}"]`,
+    `headers["${field}"]`,
+  ]),
+  'req.headers["set-cookie"]',
+  'headers["set-cookie"]',
+  'req.headers["x-api-key"]',
+  'headers["x-api-key"]',
+  'req.headers["proxy-authorization"]',
+  'headers["proxy-authorization"]',
+  'req.headers["x-access-token"]',
+  'headers["x-access-token"]',
+  'req.headers["x-auth-token"]',
+  'headers["x-auth-token"]',
+];
 
 const LOG_LEVELS = [
   "trace",
@@ -50,76 +95,6 @@ export interface LoggerOptions {
   destination?: pino.DestinationStream;
 }
 
-function normalizeFieldName(fieldName: string): string {
-  return fieldName.replace(/[-_]/g, "").toLowerCase();
-}
-
-function isSensitiveField(fieldName: string): boolean {
-  const normalizedFieldName = normalizeFieldName(fieldName);
-
-  return (
-    SENSITIVE_FIELDS.has(normalizedFieldName) ||
-    normalizedFieldName.endsWith("apikey") ||
-    normalizedFieldName.endsWith("password") ||
-    normalizedFieldName.endsWith("secret") ||
-    normalizedFieldName.endsWith("token")
-  );
-}
-
-function isPlainObject(value: object): value is Record<string, unknown> {
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
-}
-
-function sanitizeStructuredValue(
-  value: unknown,
-  seen = new WeakMap<object, unknown>(),
-): unknown {
-  if (Array.isArray(value)) {
-    if (seen.has(value)) {
-      return seen.get(value);
-    }
-
-    const sanitizedArray: unknown[] = [];
-    seen.set(value, sanitizedArray);
-    value.forEach(item =>
-      sanitizedArray.push(sanitizeStructuredValue(item, seen)),
-    );
-    return sanitizedArray;
-  }
-
-  if (value === null || typeof value !== "object" || !isPlainObject(value)) {
-    return value;
-  }
-
-  if (seen.has(value)) {
-    return seen.get(value);
-  }
-
-  const sanitizedObject = Object.create(null) as Record<string, unknown>;
-  seen.set(value, sanitizedObject);
-
-  for (const [fieldName, fieldValue] of Object.entries(value)) {
-    sanitizedObject[fieldName] = isSensitiveField(fieldName)
-      ? REDACTED_VALUE
-      : sanitizeStructuredValue(fieldValue, seen);
-  }
-
-  return sanitizedObject;
-}
-
-function sanitizeLogLine(line: string): string {
-  const trailingWhitespace = line.match(/\s*$/)?.[0] ?? "";
-  const json = line.slice(0, line.length - trailingWhitespace.length);
-
-  try {
-    const sanitized = JSON.stringify(sanitizeStructuredValue(JSON.parse(json)));
-    return sanitized === undefined ? line : `${sanitized}${trailingWhitespace}`;
-  } catch {
-    return line;
-  }
-}
-
 export function serializeRequest(
   request: pino.SerializedRequest,
 ): Record<string, unknown> {
@@ -127,7 +102,7 @@ export function serializeRequest(
     id: request.id,
     method: request.method,
     url: request.url.split("?", 1)[0],
-    headers: sanitizeStructuredValue(request.headers),
+    headers: request.headers,
     remoteAddress: request.remoteAddress,
     remotePort: request.remotePort,
   };
@@ -179,7 +154,11 @@ export function createLogger(options: LoggerOptions = {}): pino.Logger {
     options.environment ?? process.env.NODE_ENV ?? "development";
   const loggerOptions: pino.LoggerOptions = {
     level: resolveLogLevel(options),
-    hooks: { streamWrite: sanitizeLogLine },
+    redact: {
+      paths: DEFAULT_REDACT_PATHS,
+      censor: REDACTED_VALUE,
+    },
+    timestamp: pino.stdTimeFunctions.isoTime,
   };
 
   if (environment === "development" && options.destination === undefined) {

@@ -213,4 +213,20 @@ describe("automatic HTTP logging", () => {
     );
     expect(errorLog?.req?.id).toBe(requestId);
   });
+
+  it("assigns appropriate log level to automatic HTTP request logs based on status code", async () => {
+    await request(app).get("/health");
+    const healthLog = loggedRequests().find(
+      log => log.req?.url === "/health" && log.msg === "request completed",
+    );
+    expect(healthLog?.level).toBe(30);
+
+    await request(app).get("/non-existent-route-for-status-check");
+    const notFoundLog = loggedRequests().find(
+      log =>
+        log.req?.url === "/non-existent-route-for-status-check" &&
+        log.msg === "request completed",
+    );
+    expect(notFoundLog?.level).toBe(40);
+  });
 });
