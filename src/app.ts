@@ -20,6 +20,8 @@ const REQUEST_ID_HEADER = "x-request-id";
 const MAX_REQUEST_ID_LENGTH = 128;
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._~:/-]+$/;
 
+// A client-supplied X-Request-Id is trusted only when it is short and made
+// of printable token characters; anything else is replaced with a UUID.
 function isValidRequestId(value: unknown): value is string {
   return (
     typeof value === "string" &&
@@ -29,6 +31,9 @@ function isValidRequestId(value: unknown): value is string {
   );
 }
 
+// Resolves the correlation ID for a request: keeps a valid inbound
+// X-Request-Id, generates a UUID otherwise, and always echoes the result
+// back on the response so clients and logs share the same ID.
 function generateRequestId(req: IncomingMessage, res: ServerResponse): string {
   const inboundRequestId = req.headers[REQUEST_ID_HEADER];
   const requestId = isValidRequestId(inboundRequestId)
@@ -42,6 +47,9 @@ function generateRequestId(req: IncomingMessage, res: ServerResponse): string {
 export function createApp(applicationLogger = logger) {
   const app = express();
 
+  // Automatic request logging: every response is logged through pino-http
+  // with the serialized safe request metadata. Log level follows the status
+  // code — 5xx and errors log at error, 4xx at warn, the rest at info.
   app.use(
     pinoHttp({
       logger: applicationLogger,

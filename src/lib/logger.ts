@@ -2,6 +2,8 @@ import pino from "pino";
 
 const REDACTED_VALUE = "[Redacted]";
 
+// Credential-bearing field names are redacted from every log record
+// project-wide, wherever they appear (top level, nested, or in arrays).
 const SENSITIVE_FIELD_NAMES = [
   "accessKey",
   "accesskey",
@@ -52,6 +54,9 @@ const SENSITIVE_FIELD_NAMES = [
   "xapikey",
 ] as const;
 
+// Redaction paths cover the sensitive field names at every nesting depth
+// the app logs, plus the credential-bearing HTTP headers that appear on
+// serialized requests.
 export const DEFAULT_REDACT_PATHS: string[] = [
   ...SENSITIVE_FIELD_NAMES.flatMap(field => [
     field,
@@ -95,6 +100,9 @@ export interface LoggerOptions {
   destination?: pino.DestinationStream;
 }
 
+// Serializes the safe subset of a request: method, path without the query
+// string, redacted headers, and connection metadata. Request bodies and raw
+// query strings never appear in automatic logs.
 export function serializeRequest(
   request: pino.SerializedRequest,
 ): Record<string, unknown> {
@@ -118,6 +126,14 @@ function isLogLevel(value: string): value is LogLevel {
   return (LOG_LEVELS as readonly string[]).includes(value);
 }
 
+/**
+ * Resolves the active log level.
+ *
+ * LOG_LEVEL is an explicit override: when set it must be one of the pino
+ * levels, and an invalid value fails startup with a configuration error.
+ * Without an override the level follows the environment: debug in
+ * development, silent in test, info in staging and production.
+ */
 export function resolveLogLevel(
   options: Pick<LoggerOptions, "environment" | "logLevel"> = {},
 ): LogLevel {
@@ -149,6 +165,13 @@ export function resolveLogLevel(
   }
 }
 
+/**
+ * Creates the application logger.
+ *
+ * Production emits structured JSON to stdout; development formats the same
+ * records through pino-pretty. Tests inject a destination stream instead of
+ * writing to stdout.
+ */
 export function createLogger(options: LoggerOptions = {}): pino.Logger {
   const environment =
     options.environment ?? process.env.NODE_ENV ?? "development";

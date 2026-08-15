@@ -16,7 +16,7 @@ All five phases delivered. The test suite grew from 130 to 143 tests, all passin
 - `__tests__/integration/health.test.ts` — 4 tests for `/health` and `/ready`
 - `src/utils/env.ts` — `validateEnv()` startup check
 - `src/config/rateLimits.ts` — `generalLimiter` (100/15 min) and `authLimiter` (20/15 min)
-- `src/lib/logger.ts` — shared pino instance (pretty in dev, JSON in prod)
+- `src/lib/logger.ts` — shared pino instance; behavior contract in `docs/logging.md`
 - `src/app.ts` — helmet, rate limiters, pino-http, `/health`, `/ready`; Morgan removed
 - `src/middlewares/errorHandler.ts` — pino logger replaces console.error
 - `src/server.ts` — graceful SIGTERM/SIGINT shutdown with 10-second hard-exit fallback
