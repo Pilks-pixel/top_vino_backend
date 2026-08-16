@@ -14,11 +14,11 @@ The application logs through a single pino instance ([src/lib/logger.ts](../src/
 
 Without `LOG_LEVEL`, the level follows `NODE_ENV`:
 
-| Environment | Default level |
-|---|---|
-| `development` | `debug` |
-| `test` | `silent` |
-| `staging`, `production`, anything else | `info` |
+| Environment                            | Default level |
+| -------------------------------------- | ------------- |
+| `development`                          | `debug`       |
+| `test`                                 | `silent`      |
+| `staging`, `production`, anything else | `info`        |
 
 ## Redaction
 
@@ -46,25 +46,25 @@ Every request carries a correlation ID:
 
 Expected failures log as structured events carrying `event`, `route`, `statusCode`, and `requestId`; failures caused by a thrown error also carry `errorType`.
 
-| Event | Level | Emitted when |
-|---|---|---|
-| `authentication_failure` | `warn` (`error` on 5xx) | An `/api/auth` request completes with a failure status |
-| `validation_failure` | `warn` | Request payload fails schema validation |
-| `persistence_failure` | `warn` for expected constraint violations, `error` otherwise | A Prisma error reaches the error handler |
-| `request_failure` | `warn` | An operational `AppError` reaches the error handler |
-| `application_failure` | `error` | An unexpected error reaches the error handler |
-| `readiness_check_failure` | `warn` | The `/ready` database check fails |
-| `startup_failure` | `error` | Environment validation or the HTTP server fails at boot |
-| `shutdown_started`, `http_server_closed`, `database_disconnected` | `info` | Graceful shutdown progresses |
-| `shutdown_already_started`, `shutdown_timeout`, `http_server_close_failure`, `database_disconnect_failure` | `warn` / `error` | Graceful shutdown misbehaves |
+| Event                                                                                                      | Level                                                        | Emitted when                                            |
+| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------- |
+| `authentication_failure`                                                                                   | `warn` (`error` on 5xx)                                      | An `/api/auth` request completes with a failure status  |
+| `validation_failure`                                                                                       | `warn`                                                       | Request payload fails schema validation                 |
+| `persistence_failure`                                                                                      | `warn` for expected constraint violations, `error` otherwise | A Prisma error reaches the error handler                |
+| `request_failure`                                                                                          | `warn`                                                       | An operational `AppError` reaches the error handler     |
+| `application_failure`                                                                                      | `error`                                                      | An unexpected error reaches the error handler           |
+| `readiness_check_failure`                                                                                  | `warn`                                                       | The `/ready` database check fails                       |
+| `startup_failure`                                                                                          | `error`                                                      | Environment validation or the HTTP server fails at boot |
+| `shutdown_started`, `http_server_closed`, `database_disconnected`                                          | `info`                                                       | Graceful shutdown progresses                            |
+| `shutdown_already_started`, `shutdown_timeout`, `http_server_close_failure`, `database_disconnect_failure` | `warn` / `error`                                             | Graceful shutdown misbehaves                            |
 
 ## Verification
 
 The contract is enforced by tests, not by convention:
 
-- [__tests__/unit/logger.test.ts](../__tests__/unit/logger.test.ts) — level defaults and validation, destination injection, redaction coverage.
-- [__tests__/integration/logging.test.ts](../__tests__/integration/logging.test.ts) — request ID lifecycle, safe request metadata, protected auth-route logging, status-based levels.
-- [__tests__/integration/operational-logging.test.ts](../__tests__/integration/operational-logging.test.ts) — operational failure events.
+- [**tests**/unit/logger.test.ts](../__tests__/unit/logger.test.ts) — level defaults and validation, destination injection, redaction coverage.
+- [**tests**/integration/logging.test.ts](../__tests__/integration/logging.test.ts) — request ID lifecycle, safe request metadata, protected auth-route logging, status-based levels.
+- [**tests**/integration/operational-logging.test.ts](../__tests__/integration/operational-logging.test.ts) — operational failure events.
 
 ## Follow-up work
 
