@@ -1,30 +1,42 @@
 /**
  * Unit tests: deck.service
  *
- * Mocks the model layer to isolate business logic.
+ * Mocks both deckAccess.service and deckModel to isolate business logic.
  */
 import { jest } from "@jest/globals";
 
 jest.unstable_mockModule("../../src/model/deckModel.js", () => ({
-  getAllDecksForUser: jest.fn(),
-  getDeckByID: jest.fn(),
+  getDecksByScope: jest.fn(),
   createDeck: jest.fn(),
   updateDeckByID: jest.fn(),
   deleteDeckByID: jest.fn(),
 }));
 
+jest.unstable_mockModule("../../src/services/deckAccess.service.js", () => ({
+  loadDeck: jest.fn(),
+  visibleDeckScope: jest.fn(),
+}));
+
 const {
-  getAllDecksForUser,
-  getDeckByID,
+  getDecksByScope,
   createDeck: createDeckModel,
   updateDeckByID,
   deleteDeckByID,
 } = await import("../../src/model/deckModel.js");
+const { loadDeck, visibleDeckScope } = await import(
+  "../../src/services/deckAccess.service.js"
+);
 
 const { listDecksForUser, getDeck, createDeck, updateDeck, deleteDeck } =
   await import("../../src/services/deck.service.js");
 
 import { NotFoundError, ForbiddenError } from "../../src/utils/appError.js";
+
+const requestor = {
+  id: "user-1",
+  email: "u@test.com",
+  subscriptionType: "FREE" as const,
+};
 
 const mockDeck = {
   id: "deck-1",
@@ -37,104 +49,154 @@ const mockDeck = {
   updatedAt: new Date(),
 };
 
+const mockScope = { OR: [{ userId: "user-1" }] };
+
 beforeEach(() => jest.clearAllMocks());
 
-// ─── listDecksForUser ─────────────────────────────────────────────────────────
+// ─── listDecksForUser ──────────────────────────────────────────────────────
 
 describe("listDecksForUser", () => {
-  it("returns decks for the user", async () => {
-    jest.mocked(getAllDecksForUser).mockResolvedValue([mockDeck]);
-    const result = await listDecksForUser("user-1");
+  it("returns decks for target user scoped by requestor visibility", async () => {
+    jest.mocked(visibleDeckScope).mockReturnValue(mockScope as never);
+    jest.mocked(getDecksByScope).mockResolvedValue([mockDeck]);
+
+    const result = await listDecksForUser(requestor, "user-1");
+
     expect(result).toEqual([mockDeck]);
-    expect(getAllDecksForUser).toHaveBeenCalledWith("user-1", undefined);
+    expect(visibleDeckScope).toHaveBeenCalledWith(requestor);
+    expect(getDecksByScope).toHaveBeenCalledWith("user-1", mockScope);
   });
 
-  it("returns empty array when user has no decks", async () => {
-    jest.mocked(getAllDecksForUser).mockResolvedValue([]);
-    const result = await listDecksForUser("user-1");
+  it("returns empty array when no visible decks exist", async () => {
+    jest.mocked(visibleDeckScope).mockReturnValue(mockScope as never);
+    jest.mocked(getDecksByScope).mockResolvedValue([]);
+
+    const result = await listDecksForUser(requestor, "other-user");
+
     expect(result).toEqual([]);
   });
 });
 
-// ─── getDeck ──────────────────────────────────────────────────────────────────
+// ─── getDeck ──────────────────────────────────────────────────────────────────────────
 
 describe("getDeck", () => {
-  it("returns deck when found", async () => {
-    jest.mocked(getDeckByID).mockResolvedValue(mockDeck);
-    const result = await getDeck("deck-1");
+  it("returns deck when accessible", async () => {
+    jest.mocked(loadDeck).mockResolvedValue(mockDeck);
+
+    const result = await getDeck(requestor, "deck-1");
+
     expect(result).toEqual(mockDeck);
+    expect(loadDeck).toHaveBeenCalledWith(requestor, "deck-1", "read");
   });
 
   it("throws NotFoundError when deck does not exist", async () => {
-    jest.mocked(getDeckByID).mockResolvedValue(null);
-    await expect(getDeck("missing")).rejects.toBeInstanceOf(NotFoundError);
+    jest
+      .mocked(loadDeck)
+      .mockRejectedValue(new NotFoundError("Deck", "missing"));
+
+    await expect(getDeck(requestor, "missing")).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+  });
+
+  it("throws ForbiddenError when deck is inaccessible", async () => {
+    jest
+      .mocked(loadDeck)
+      .mockRejectedValue(new ForbiddenError("Access denied"));
+
+    await expect(getDeck({ id: "stranger" }, "deck-1")).rejects.toBeInstanceOf(
+      ForbiddenError,
+    );
   });
 });
 
-// ─── createDeck ───────────────────────────────────────────────────────────────
+// ─── createDeck ────────────────────────────────────────────────────────────────────────
 
 describe("createDeck", () => {
-  it("creates and returns a deck", async () => {
+  it("creates and returns a deck without requiring Deck Access", async () => {
     jest.mocked(createDeckModel).mockResolvedValue(mockDeck);
+
     const result = await createDeck({
       userId: "user-1",
       name: "French Vocab",
       topic: "Languages",
       isPublic: false,
     });
+
     expect(result).toEqual(mockDeck);
+    expect(loadDeck).not.toHaveBeenCalled();
   });
 });
 
-// ─── updateDeck ───────────────────────────────────────────────────────────────
+// ─── updateDeck ────────────────────────────────────────────────────────────────────────
 
 describe("updateDeck", () => {
-  it("updates deck when owner matches", async () => {
+  it("updates deck when edit access is granted", async () => {
     const updated = { ...mockDeck, name: "Spanish Vocab" };
-    jest.mocked(getDeckByID).mockResolvedValue(mockDeck);
+    jest.mocked(loadDeck).mockResolvedValue(mockDeck);
     jest.mocked(updateDeckByID).mockResolvedValue(updated);
-    const result = await updateDeck("deck-1", "user-1", {
+
+    const result = await updateDeck(requestor, "deck-1", {
       name: "Spanish Vocab",
     });
+
     expect(result).toEqual(updated);
+    expect(loadDeck).toHaveBeenCalledWith(requestor, "deck-1", "edit");
+  });
+
+  it("throws ForbiddenError when Deck Access denies edit", async () => {
+    jest
+      .mocked(loadDeck)
+      .mockRejectedValue(new ForbiddenError("Access denied"));
+
+    await expect(
+      updateDeck({ id: "viewer" }, "deck-1", { name: "X" }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+    expect(updateDeckByID).not.toHaveBeenCalled();
   });
 
   it("throws NotFoundError when deck does not exist", async () => {
-    jest.mocked(getDeckByID).mockResolvedValue(null);
-    await expect(
-      updateDeck("missing", "user-1", { name: "X" }),
-    ).rejects.toBeInstanceOf(NotFoundError);
-  });
+    jest
+      .mocked(loadDeck)
+      .mockRejectedValue(new NotFoundError("Deck", "missing"));
 
-  it("throws ForbiddenError when requestor is not owner", async () => {
-    jest.mocked(getDeckByID).mockResolvedValue(mockDeck);
     await expect(
-      updateDeck("deck-1", "other-user", { name: "X" }),
-    ).rejects.toBeInstanceOf(ForbiddenError);
+      updateDeck(requestor, "missing", { name: "X" }),
+    ).rejects.toBeInstanceOf(NotFoundError);
   });
 });
 
-// ─── deleteDeck ───────────────────────────────────────────────────────────────
+// ─── deleteDeck ────────────────────────────────────────────────────────────────────────
 
 describe("deleteDeck", () => {
-  it("deletes deck when owner matches", async () => {
-    jest.mocked(getDeckByID).mockResolvedValue(mockDeck);
+  it("deletes deck when owner", async () => {
+    jest.mocked(loadDeck).mockResolvedValue(mockDeck);
     jest.mocked(deleteDeckByID).mockResolvedValue(undefined);
-    const result = await deleteDeck("deck-1", "user-1");
+
+    const result = await deleteDeck(requestor, "deck-1");
+
     expect(result).toEqual({ message: "Deck deleted successfully" });
+    expect(loadDeck).toHaveBeenCalledWith(requestor, "deck-1", "delete");
+  });
+
+  it("throws ForbiddenError when editor tries to delete", async () => {
+    jest
+      .mocked(loadDeck)
+      .mockRejectedValue(new ForbiddenError("Access denied"));
+
+    await expect(deleteDeck({ id: "editor" }, "deck-1")).rejects.toBeInstanceOf(
+      ForbiddenError,
+    );
+    expect(deleteDeckByID).not.toHaveBeenCalled();
   });
 
   it("throws NotFoundError when deck does not exist", async () => {
-    jest.mocked(getDeckByID).mockResolvedValue(null);
-    await expect(deleteDeck("missing", "user-1")).rejects.toBeInstanceOf(
-      NotFoundError,
-    );
-  });
+    jest
+      .mocked(loadDeck)
+      .mockRejectedValue(new NotFoundError("Deck", "missing"));
 
-  it("throws ForbiddenError when requestor is not owner", async () => {
-    jest.mocked(getDeckByID).mockResolvedValue(mockDeck);
-    await expect(deleteDeck("deck-1", "other-user")).rejects.toBeInstanceOf(
-      ForbiddenError,
+    await expect(deleteDeck(requestor, "missing")).rejects.toBeInstanceOf(
+      NotFoundError,
     );
   });
 });

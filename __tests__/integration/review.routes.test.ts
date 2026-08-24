@@ -95,6 +95,27 @@ describe("POST /review", () => {
 
     expect(res.status).toBe(401);
   });
+
+  it("returns 403 when card belongs to an inaccessible private deck", async () => {
+    const otherUser = await createTestUser();
+    const deck = await createTestDeck(otherUser.id, { isPublic: false });
+    const card = await createTestCard(deck.id);
+    const res = await request(app)
+      .post("/review")
+      .send({ cardId: card.id, quality: 3 });
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 201 when studying a public deck's card", async () => {
+    const otherUser = await createTestUser();
+    const deck = await createTestDeck(otherUser.id, { isPublic: true });
+    const card = await createTestCard(deck.id);
+    const res = await request(app)
+      .post("/review")
+      .send({ cardId: card.id, quality: 4 });
+    expect(res.status).toBe(201);
+    expect(res.body.data.review).toBeDefined();
+  });
 });
 
 describe("multi-review sequence", () => {
@@ -102,14 +123,12 @@ describe("multi-review sequence", () => {
     const dayMs = 24 * 60 * 60 * 1000;
     const expectedIntervals = [1, 6, 15, 38, 95];
 
-    const user = await createTestUser();
-    const deck = await createTestDeck(user.id);
+    const deck = await createTestDeck(testUser.id);
     const card = await createTestCard(deck.id);
 
     for (const expectedDays of expectedIntervals) {
       const requestStart = Date.now();
       const res = await request(app).post("/review").send({
-        userId: user.id,
         cardId: card.id,
         quality: 4,
       });
@@ -152,6 +171,17 @@ describe("GET /review/due", () => {
     expect(res.body.data[0].id).toBe(dueCard.id);
   });
 
+  it("excludes cards from decks that are no longer accessible", async () => {
+    const otherUser = await createTestUser();
+    const privateDeck = await createTestDeck(otherUser.id, { isPublic: false });
+    const card = await createTestCard(privateDeck.id);
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    await createTestProgress(testUser.id, card.id, { nextReviewAt: yesterday });
+    const res = await request(app).get("/review/due");
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(0);
+  });
+
   it("returns 401 when unauthenticated", async () => {
     (
       auth.api.getSession as unknown as ReturnType<typeof jest.fn>
@@ -177,6 +207,14 @@ describe("GET /review/progress/:cardId", () => {
     expect(res.status).toBe(200);
     expect(res.body.data.userId).toBe(testUser.id);
     expect(res.body.data.cardId).toBe(card.id);
+  });
+
+  it("returns 403 when card belongs to an inaccessible private deck", async () => {
+    const otherUser = await createTestUser();
+    const deck = await createTestDeck(otherUser.id, { isPublic: false });
+    const card = await createTestCard(deck.id);
+    const res = await request(app).get(`/review/progress/${card.id}`);
+    expect(res.status).toBe(403);
   });
 
   it("returns 404 when progress does not exist", async () => {

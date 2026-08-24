@@ -14,25 +14,13 @@ export const httpListDecks = catchAsync(async (req: Request, res: Response) => {
   if (rawUserId !== undefined && typeof rawUserId !== "string") {
     throw new BadRequestError("Invalid userId query parameter");
   }
-  const requestedUserId = rawUserId;
-
-  let targetUserId: string;
-  let isPublicFilter: boolean | undefined;
-
-  if (!requestedUserId || requestedUserId === req.user.id) {
-    targetUserId = req.user.id;
-    isPublicFilter = undefined;
-  } else {
-    targetUserId = requestedUserId;
-    isPublicFilter = true;
-  }
-
-  const decks = await listDecksForUser(targetUserId, isPublicFilter);
+  const targetUserId = rawUserId ?? req.user.id;
+  const decks = await listDecksForUser(req.user, targetUserId);
   res.status(200).json({ success: true, data: decks });
 });
 
 export const httpGetDeck = catchAsync(async (req: Request, res: Response) => {
-  const deck = await getDeck(req.params.id);
+  const deck = await getDeck(req.user, req.params.id);
   res.status(200).json({ success: true, data: deck });
 });
 
@@ -45,14 +33,14 @@ export const httpCreateDeck = catchAsync(
 
 export const httpUpdateDeck = catchAsync(
   async (req: Request, res: Response) => {
-    const deck = await updateDeck(req.params.id, req.user.id, req.body);
+    const deck = await updateDeck(req.user, req.params.id, req.body);
     res.status(200).json({ success: true, data: deck });
   },
 );
 
 export const httpDeleteDeck = catchAsync(
   async (req: Request, res: Response) => {
-    const result = await deleteDeck(req.params.id, req.user.id);
+    const result = await deleteDeck(req.user, req.params.id);
     res.status(200).json({ success: true, ...result });
   },
 );

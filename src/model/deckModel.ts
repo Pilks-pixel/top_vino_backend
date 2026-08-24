@@ -1,20 +1,23 @@
+import type { Prisma } from "../../generated/prisma/client.js";
 import prisma from "../lib/prisma.ts";
 import type { CreateDeckInput, UpdateDeckInput } from "../utils/deckSchema.ts";
 
 type CreateDeckData = CreateDeckInput & { userId: string };
 
-async function getAllDecksForUser(userId: string, isPublic?: boolean) {
+/**
+ * Get decks by scope for a specific user.
+ * @param targetUserId - The ID of the user whose decks to retrieve.
+ * @param scope - The Prisma.DeckWhereInput scope to filter decks.
+ * @returns A promise that resolves to an array of decks.
+ */
+async function getDecksByScope(
+  targetUserId: string,
+  scope: Prisma.DeckWhereInput,
+) {
   return prisma.deck.findMany({
-    where: {
-      userId,
-      ...(isPublic !== undefined && { isPublic }),
-    },
+    where: { AND: [{ userId: targetUserId }, scope] },
     orderBy: { createdAt: "desc" },
   });
-}
-
-async function getDeckByID(id: string) {
-  return prisma.deck.findUnique({ where: { id } });
 }
 
 async function createDeck(data: CreateDeckData) {
@@ -29,10 +32,4 @@ async function deleteDeckByID(id: string) {
   await prisma.deck.delete({ where: { id } });
 }
 
-export {
-  getAllDecksForUser,
-  getDeckByID,
-  createDeck,
-  updateDeckByID,
-  deleteDeckByID,
-};
+export { getDecksByScope, createDeck, updateDeckByID, deleteDeckByID };

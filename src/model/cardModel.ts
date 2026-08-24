@@ -8,10 +8,6 @@ export async function getCardsForDeck(deckId: string) {
   });
 }
 
-export async function getCardByID(id: string) {
-  return prisma.card.findUnique({ where: { id } });
-}
-
 export async function createCard(deckId: string, data: CreateCardInput) {
   return prisma.card.create({ data: { ...data, deckId } });
 }
