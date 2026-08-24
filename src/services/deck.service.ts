@@ -1,7 +1,7 @@
-import { NotFoundError, ForbiddenError } from "../utils/appError.ts";
+import type { Requestor } from "./deckAccess.service.ts";
+import { loadDeck, visibleDeckScope } from "./deckAccess.service.ts";
 import {
-  getAllDecksForUser,
-  getDeckByID,
+  getDecksByScope,
   createDeck as createDeckModel,
   updateDeckByID,
   deleteDeckByID,
@@ -10,14 +10,15 @@ import type { CreateDeckInput, UpdateDeckInput } from "../utils/deckSchema.ts";
 
 type CreateDeckData = CreateDeckInput & { userId: string };
 
-export async function listDecksForUser(userId: string, isPublic?: boolean) {
-  return getAllDecksForUser(userId, isPublic);
+export async function listDecksForUser(
+  requestor: Requestor,
+  targetUserId: string,
+) {
+  return getDecksByScope(targetUserId, visibleDeckScope(requestor));
 }
 
-export async function getDeck(id: string) {
-  const deck = await getDeckByID(id);
-  if (!deck) throw new NotFoundError("Deck", id);
-  return deck;
+export async function getDeck(requestor: Requestor, id: string) {
+  return loadDeck(requestor, id, "read");
 }
 
 export async function createDeck(data: CreateDeckData) {
@@ -25,22 +26,15 @@ export async function createDeck(data: CreateDeckData) {
 }
 
 export async function updateDeck(
+  requestor: Requestor,
   id: string,
-  requestorId: string,
   data: UpdateDeckInput,
 ) {
-  const deck = await getDeckByID(id);
-  if (!deck) throw new NotFoundError("Deck", id);
-  if (deck.userId !== requestorId)
-    throw new ForbiddenError("You do not own this deck");
+  await loadDeck(requestor, id, "edit");
   return updateDeckByID(id, data);
 }
-
-export async function deleteDeck(id: string, requestorId: string) {
-  const deck = await getDeckByID(id);
-  if (!deck) throw new NotFoundError("Deck", id);
-  if (deck.userId !== requestorId)
-    throw new ForbiddenError("You do not own this deck");
+export async function deleteDeck(requestor: Requestor, id: string) {
+  await loadDeck(requestor, id, "delete");
   await deleteDeckByID(id);
   return { message: "Deck deleted successfully" };
 }

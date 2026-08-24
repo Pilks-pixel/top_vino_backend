@@ -1,3 +1,4 @@
+import type { Prisma } from "../../generated/prisma/client.js";
 import prisma from "../lib/prisma.ts";
 import type {
   ReviewCreateInput,
@@ -8,10 +9,14 @@ export async function createReview(data: ReviewCreateInput) {
   return prisma.userCardReview.create({ data });
 }
 
-export async function getDueCards(userId: string) {
+export async function getDueCards(
+  userId: string,
+  deckScope: Prisma.DeckWhereInput,
+) {
   const now = new Date();
   return prisma.card.findMany({
     where: {
+      deck: deckScope,
       userProgress: {
         some: {
           userId,

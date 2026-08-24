@@ -2,6 +2,17 @@
  * Unit tests: review.service
  */
 import { jest } from "@jest/globals";
+import type {
+  Card,
+  UserCardProgress,
+  UserCardReview,
+  Prisma,
+} from "../../generated/prisma/client.js";
+
+jest.unstable_mockModule("../../src/services/deckAccess.service.js", () => ({
+  loadCard: jest.fn(),
+  visibleDeckScope: jest.fn(),
+}));
 
 jest.unstable_mockModule("../../src/model/reviewModel.js", () => ({
   createReview: jest.fn(),
@@ -10,25 +21,23 @@ jest.unstable_mockModule("../../src/model/reviewModel.js", () => ({
   upsertCardProgress: jest.fn(),
 }));
 
-jest.unstable_mockModule("../../src/model/cardModel.js", () => ({
-  getCardsForDeck: jest.fn(),
-  getCardByID: jest.fn(),
-  createCard: jest.fn(),
-  updateCardByID: jest.fn(),
-  deleteCardByID: jest.fn(),
-}));
-
+const { loadCard, visibleDeckScope } = await import(
+  "../../src/services/deckAccess.service.js"
+);
 const { createReview, getDueCards, getCardProgress, upsertCardProgress } =
   await import("../../src/model/reviewModel.js");
-const { getCardByID } = await import("../../src/model/cardModel.js");
 
 const { submitReview, listDueCards, getProgress } = await import(
   "../../src/services/review.service.js"
 );
 
-import { NotFoundError, BadRequestError } from "../../src/utils/appError.js";
+import {
+  NotFoundError,
+  BadRequestError,
+  ForbiddenError,
+} from "../../src/utils/appError.js";
 
-const mockCard = {
+const mockCard: Card = {
   id: "card-1",
   deckId: "deck-1",
   type: "basic",
@@ -43,7 +52,8 @@ const mockCard = {
   createdAt: new Date(),
   updatedAt: new Date(),
 };
-const mockProgress = {
+
+const mockProgress: UserCardProgress = {
   userId: "user-1",
   cardId: "card-1",
   easeFactor: 2.5,
@@ -54,12 +64,13 @@ const mockProgress = {
   nextReviewAt: null,
   isMarkedForReview: false,
 };
-const mockReview = {
+
+const mockReview: UserCardReview = {
   id: "review-1",
   userId: "user-1",
   cardId: "card-1",
   quality: 4,
-  easeFactor: 2.6,
+  easeFactor: 2.5,
   interval: 1,
   reviewedAt: new Date(),
   a: null,
@@ -67,53 +78,79 @@ const mockReview = {
   c: null,
 };
 
+const mockScope: Prisma.DeckWhereInput = { isPublic: true };
+
 beforeEach(() => jest.clearAllMocks());
 
 // ─── submitReview ─────────────────────────────────────────────────────────────
 
 describe("submitReview", () => {
   it("creates a review and updates progress", async () => {
-    jest.mocked(getCardByID).mockResolvedValue(mockCard);
+    jest.mocked(loadCard).mockResolvedValue(mockCard);
     jest.mocked(getCardProgress).mockResolvedValue(mockProgress);
     jest.mocked(createReview).mockResolvedValue(mockReview);
     jest
       .mocked(upsertCardProgress)
       .mockResolvedValue({ ...mockProgress, reviewCount: 1 });
 
-    const result = await submitReview({
-      userId: "user-1",
-      cardId: "card-1",
-      quality: 4,
-    });
+    const result = await submitReview(
+      { id: "user-1" },
+      {
+        cardId: "card-1",
+        quality: 4,
+      },
+    );
     expect(result.review).toBeDefined();
     expect(result.progress).toBeDefined();
-    expect(createReview).toHaveBeenCalled();
-    expect(upsertCardProgress).toHaveBeenCalled();
+    expect(loadCard).toHaveBeenCalledWith({ id: "user-1" }, "card-1", "read");
+    expect(getCardProgress).toHaveBeenCalledWith("user-1", "card-1");
+    expect(createReview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "user-1",
+        cardId: "card-1",
+        quality: 4,
+        easeFactor: 2.5,
+        interval: 1,
+      }),
+    );
+    expect(upsertCardProgress).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "user-1",
+        cardId: "card-1",
+        easeFactor: 2.5,
+        reviewCount: 1,
+        correctStreak: 1,
+        currentInterval: 1,
+      }),
+    );
   });
 
   it("Case A - bootstrap first success sets interval to 1", async () => {
-    const progress = {
+    const progress: UserCardProgress = {
       ...mockProgress,
       reviewCount: 0,
       currentInterval: 1,
       correctStreak: 0,
       easeFactor: 2.5,
     };
-    jest.mocked(getCardByID).mockResolvedValue(mockCard);
+    jest.mocked(loadCard).mockResolvedValue(mockCard);
     jest.mocked(getCardProgress).mockResolvedValue(progress);
     jest.mocked(createReview).mockResolvedValue(mockReview);
     jest
       .mocked(upsertCardProgress)
       .mockResolvedValue({ ...progress, reviewCount: 1, correctStreak: 1 });
 
-    await submitReview({
-      userId: "user-1",
-      cardId: "card-1",
-      quality: 4,
-    });
+    await submitReview(
+      { id: "user-1" },
+      {
+        cardId: "card-1",
+        quality: 4,
+      },
+    );
 
     expect(upsertCardProgress).toHaveBeenCalledWith(
       expect.objectContaining({
+        userId: "user-1",
         reviewCount: 1,
         currentInterval: 1,
         correctStreak: 1,
@@ -123,28 +160,31 @@ describe("submitReview", () => {
   });
 
   it("Case B - bootstrap second success sets interval to 6", async () => {
-    const progress = {
+    const progress: UserCardProgress = {
       ...mockProgress,
       reviewCount: 1,
       currentInterval: 1,
       correctStreak: 1,
       easeFactor: 2.5,
     };
-    jest.mocked(getCardByID).mockResolvedValue(mockCard);
+    jest.mocked(loadCard).mockResolvedValue(mockCard);
     jest.mocked(getCardProgress).mockResolvedValue(progress);
     jest.mocked(createReview).mockResolvedValue(mockReview);
     jest
       .mocked(upsertCardProgress)
       .mockResolvedValue({ ...progress, reviewCount: 2, correctStreak: 2 });
 
-    await submitReview({
-      userId: "user-1",
-      cardId: "card-1",
-      quality: 4,
-    });
+    await submitReview(
+      { id: "user-1" },
+      {
+        cardId: "card-1",
+        quality: 4,
+      },
+    );
 
     expect(upsertCardProgress).toHaveBeenCalledWith(
       expect.objectContaining({
+        userId: "user-1",
         reviewCount: 2,
         currentInterval: 6,
         correctStreak: 2,
@@ -154,28 +194,31 @@ describe("submitReview", () => {
   });
 
   it("Case C - steady-state fourth review uses previous interval", async () => {
-    const progress = {
+    const progress: UserCardProgress = {
       ...mockProgress,
       reviewCount: 3,
       currentInterval: 15,
       correctStreak: 3,
       easeFactor: 2.5,
     };
-    jest.mocked(getCardByID).mockResolvedValue(mockCard);
+    jest.mocked(loadCard).mockResolvedValue(mockCard);
     jest.mocked(getCardProgress).mockResolvedValue(progress);
     jest.mocked(createReview).mockResolvedValue(mockReview);
     jest
       .mocked(upsertCardProgress)
       .mockResolvedValue({ ...progress, reviewCount: 4, correctStreak: 4 });
 
-    await submitReview({
-      userId: "user-1",
-      cardId: "card-1",
-      quality: 4,
-    });
+    await submitReview(
+      { id: "user-1" },
+      {
+        cardId: "card-1",
+        quality: 4,
+      },
+    );
 
     expect(upsertCardProgress).toHaveBeenCalledWith(
       expect.objectContaining({
+        userId: "user-1",
         reviewCount: 4,
         currentInterval: 38,
         correctStreak: 4,
@@ -185,14 +228,14 @@ describe("submitReview", () => {
   });
 
   it("Case D - failure resets reviewCount and currentInterval", async () => {
-    const progress = {
+    const progress: UserCardProgress = {
       ...mockProgress,
       reviewCount: 3,
       currentInterval: 15,
       correctStreak: 3,
       easeFactor: 2.5,
     };
-    jest.mocked(getCardByID).mockResolvedValue(mockCard);
+    jest.mocked(loadCard).mockResolvedValue(mockCard);
     jest.mocked(getCardProgress).mockResolvedValue(progress);
     jest.mocked(createReview).mockResolvedValue(mockReview);
     jest.mocked(upsertCardProgress).mockResolvedValue({
@@ -203,14 +246,17 @@ describe("submitReview", () => {
       easeFactor: 2.18,
     });
 
-    await submitReview({
-      userId: "user-1",
-      cardId: "card-1",
-      quality: 2,
-    });
+    await submitReview(
+      { id: "user-1" },
+      {
+        cardId: "card-1",
+        quality: 2,
+      },
+    );
 
     expect(upsertCardProgress).toHaveBeenCalledWith(
       expect.objectContaining({
+        userId: "user-1",
         reviewCount: 0,
         currentInterval: 1,
         correctStreak: 0,
@@ -220,14 +266,14 @@ describe("submitReview", () => {
   });
 
   it("Case E - EF floor clamps to 1.3", async () => {
-    const progress = {
+    const progress: UserCardProgress = {
       ...mockProgress,
       reviewCount: 0,
       currentInterval: 1,
       correctStreak: 0,
       easeFactor: 1.5,
     };
-    jest.mocked(getCardByID).mockResolvedValue(mockCard);
+    jest.mocked(loadCard).mockResolvedValue(mockCard);
     jest.mocked(getCardProgress).mockResolvedValue(progress);
     jest.mocked(createReview).mockResolvedValue(mockReview);
     jest.mocked(upsertCardProgress).mockResolvedValue({
@@ -235,29 +281,46 @@ describe("submitReview", () => {
       easeFactor: 1.3,
     });
 
-    await submitReview({
-      userId: "user-1",
-      cardId: "card-1",
-      quality: 0,
-    });
+    await submitReview(
+      { id: "user-1" },
+      {
+        cardId: "card-1",
+        quality: 0,
+      },
+    );
 
     expect(upsertCardProgress).toHaveBeenCalledWith(
       expect.objectContaining({
+        userId: "user-1",
         easeFactor: 1.3,
       }),
     );
   });
 
   it("throws NotFoundError when card does not exist", async () => {
-    jest.mocked(getCardByID).mockResolvedValue(null);
+    jest
+      .mocked(loadCard)
+      .mockRejectedValue(new NotFoundError("Card", "missing"));
     await expect(
-      submitReview({ userId: "user-1", cardId: "missing", quality: 4 }),
+      submitReview({ id: "user-1" }, { cardId: "missing", quality: 4 }),
     ).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it("throws ForbiddenError for inaccessible card", async () => {
+    jest
+      .mocked(loadCard)
+      .mockRejectedValue(new ForbiddenError("Access denied"));
+    await expect(
+      submitReview({ id: "user-1" }, { cardId: "inaccessible", quality: 4 }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
   });
 
   it("throws BadRequestError when quality is out of range", async () => {
     await expect(
-      submitReview({ userId: "user-1", cardId: "card-1", quality: 6 }),
+      submitReview({ id: "user-1" }, { cardId: "card-1", quality: 6 }),
+    ).rejects.toBeInstanceOf(BadRequestError);
+    await expect(
+      submitReview({ id: "user-1" }, { cardId: "card-1", quality: -1 }),
     ).rejects.toBeInstanceOf(BadRequestError);
   });
 });
@@ -265,27 +328,51 @@ describe("submitReview", () => {
 // ─── listDueCards ─────────────────────────────────────────────────────────────
 
 describe("listDueCards", () => {
-  it("returns due cards for user", async () => {
+  it("returns due cards using visible scope", async () => {
+    jest.mocked(visibleDeckScope).mockReturnValue(mockScope);
     jest.mocked(getDueCards).mockResolvedValue([mockCard]);
-    const result = await listDueCards("user-1");
+    const result = await listDueCards({ id: "user-1" });
     expect(result).toEqual([mockCard]);
-    expect(getDueCards).toHaveBeenCalledWith("user-1");
+    expect(visibleDeckScope).toHaveBeenCalledWith({ id: "user-1" });
+    expect(getDueCards).toHaveBeenCalledWith("user-1", mockScope);
   });
 });
 
 // ─── getProgress ─────────────────────────────────────────────────────────────
 
 describe("getProgress", () => {
-  it("returns progress when found", async () => {
+  it("returns progress when accessible", async () => {
+    jest.mocked(loadCard).mockResolvedValue(mockCard);
     jest.mocked(getCardProgress).mockResolvedValue(mockProgress);
-    const result = await getProgress("user-1", "card-1");
+    const result = await getProgress({ id: "user-1" }, "card-1");
     expect(result).toEqual(mockProgress);
+    expect(loadCard).toHaveBeenCalledWith({ id: "user-1" }, "card-1", "read");
+    expect(getCardProgress).toHaveBeenCalledWith("user-1", "card-1");
+  });
+
+  it("throws ForbiddenError when card inaccessible", async () => {
+    jest
+      .mocked(loadCard)
+      .mockRejectedValue(new ForbiddenError("Access denied"));
+    await expect(
+      getProgress({ id: "user-1" }, "card-1"),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it("throws NotFoundError when card does not exist", async () => {
+    jest
+      .mocked(loadCard)
+      .mockRejectedValue(new NotFoundError("Card", "missing"));
+    await expect(
+      getProgress({ id: "user-1" }, "missing"),
+    ).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it("throws NotFoundError when progress does not exist", async () => {
+    jest.mocked(loadCard).mockResolvedValue(mockCard);
     jest.mocked(getCardProgress).mockResolvedValue(null);
-    await expect(getProgress("user-1", "card-1")).rejects.toBeInstanceOf(
-      NotFoundError,
-    );
+    await expect(
+      getProgress({ id: "user-1" }, "card-1"),
+    ).rejects.toBeInstanceOf(NotFoundError);
   });
 });

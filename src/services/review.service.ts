@@ -1,5 +1,6 @@
 import { NotFoundError, BadRequestError } from "../utils/appError.ts";
-import { getCardByID } from "../model/cardModel.ts";
+import type { Requestor } from "./deckAccess.service.ts";
+import { loadCard, visibleDeckScope } from "./deckAccess.service.ts";
 import {
   createReview,
   getDueCards,
@@ -57,16 +58,18 @@ function sm2(
   return { newEaseFactor, newInterval, newStreak, newReviewCount };
 }
 
-export async function submitReview(input: SubmitReviewInput) {
-  // validate input quality - is this necessary? zod should handle it
+export async function submitReview(
+  requestor: Requestor,
+  input: SubmitReviewInput,
+) {
+  // guard for non-HTTP callers that bypass zod validation
   if (input.quality < 0 || input.quality > 5) {
     throw new BadRequestError("quality must be between 0 and 5");
   }
 
-  const card = await getCardByID(input.cardId);
-  if (!card) throw new NotFoundError("Card", input.cardId);
+  await loadCard(requestor, input.cardId, "read");
 
-  const existing = await getCardProgress(input.userId, input.cardId);
+  const existing = await getCardProgress(requestor.id, input.cardId);
   const easeFactor = existing?.easeFactor ?? 2.5;
   const reviewCount = existing?.reviewCount ?? 0;
   const correctStreak = existing?.correctStreak ?? 0;
@@ -86,7 +89,7 @@ export async function submitReview(input: SubmitReviewInput) {
   );
 
   const review = await createReview({
-    userId: input.userId,
+    userId: requestor.id,
     cardId: input.cardId,
     quality: input.quality,
     easeFactor: newEaseFactor,
@@ -94,7 +97,7 @@ export async function submitReview(input: SubmitReviewInput) {
   });
 
   const progress = await upsertCardProgress({
-    userId: input.userId,
+    userId: requestor.id,
     cardId: input.cardId,
     easeFactor: newEaseFactor,
     reviewCount: newReviewCount,
@@ -107,12 +110,14 @@ export async function submitReview(input: SubmitReviewInput) {
   return { review, progress };
 }
 
-export async function listDueCards(userId: string) {
-  return getDueCards(userId);
+export async function listDueCards(requestor: Requestor) {
+  return getDueCards(requestor.id, visibleDeckScope(requestor));
 }
 
-export async function getProgress(userId: string, cardId: string) {
-  const progress = await getCardProgress(userId, cardId);
-  if (!progress) throw new NotFoundError("Progress", `${userId}/${cardId}`);
+export async function getProgress(requestor: Requestor, cardId: string) {
+  await loadCard(requestor, cardId, "read");
+  const progress = await getCardProgress(requestor.id, cardId);
+  if (!progress)
+    throw new NotFoundError("Progress", `${requestor.id}/${cardId}`);
   return progress;
 }

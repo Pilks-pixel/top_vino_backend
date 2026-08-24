@@ -20,9 +20,8 @@ const request = (await import("supertest")).default;
 const { auth } = await import("../../src/lib/auth.js");
 const { app } = await import("../setup/testApp.js");
 const { cleanDb, disconnectDb } = await import("../setup/testDb.js");
-const { createTestUser, createTestDeck } = await import(
-  "../setup/factories.js"
-);
+const { createTestUser, createTestDeck, createTestDeckCollaborator } =
+  await import("../setup/factories.js");
 
 // consider if subscriptionType should be a union type or enum instead of string
 let testUser: { id: string; email: string; subscriptionType: string };
@@ -122,9 +121,23 @@ describe("GET /deck", () => {
 // ─── GET /deck/:id ────────────────────────────────────────────────────────────
 
 describe("GET /deck/:id", () => {
-  it("returns deck by id", async () => {
-    const user = await createTestUser();
-    const deck = await createTestDeck(user.id);
+  it("returns own deck by id", async () => {
+    const deck = await createTestDeck(testUser.id);
+    const res = await request(app).get(`/deck/${deck.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.id).toBe(deck.id);
+  });
+
+  it("returns 403 when stranger requests another user's private deck", async () => {
+    const owner = await createTestUser({ email: "private-owner@test.com" });
+    const deck = await createTestDeck(owner.id, { isPublic: false });
+    const res = await request(app).get(`/deck/${deck.id}`);
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 200 for a public deck owned by another user", async () => {
+    const owner = await createTestUser({ email: "public-owner@test.com" });
+    const deck = await createTestDeck(owner.id, { isPublic: true });
     const res = await request(app).get(`/deck/${deck.id}`);
     expect(res.status).toBe(200);
     expect(res.body.data.id).toBe(deck.id);
@@ -241,5 +254,81 @@ describe("DELETE /deck/:id", () => {
     ).mockResolvedValueOnce(null);
     const res = await request(app).delete(`/deck/${deck.id}`);
     expect(res.status).toBe(401);
+  });
+});
+
+// ─── Collaborator access ──────────────────────────────────────────────────────────────────
+
+describe("GET /deck listing includes collaborator-visible private decks", () => {
+  it("includes private deck shared with requestor as collaborator", async () => {
+    const owner = await createTestUser({ email: "collab-owner@test.com" });
+    const privateDeck = await createTestDeck(owner.id, { isPublic: false });
+    await createTestDeckCollaborator(privateDeck.id, testUser.id, "VIEWER");
+
+    const res = await request(app).get(`/deck?userId=${owner.id}`);
+
+    expect(res.status).toBe(200);
+    const ids = res.body.data.map((d: { id: string }) => d.id);
+    expect(ids).toContain(privateDeck.id);
+  });
+});
+
+describe("EDITOR collaborator can update but not delete", () => {
+  it("allows EDITOR to update the deck", async () => {
+    const owner = await createTestUser({ email: "editor-owner@test.com" });
+    const deck = await createTestDeck(owner.id);
+    await createTestDeckCollaborator(deck.id, testUser.id, "EDITOR");
+
+    const res = await request(app)
+      .put(`/deck/${deck.id}`)
+      .send({ name: "Editor Update" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.name).toBe("Editor Update");
+  });
+
+  it("returns 403 when EDITOR tries to delete the deck", async () => {
+    const owner = await createTestUser({ email: "editor-del-owner@test.com" });
+    const deck = await createTestDeck(owner.id);
+    await createTestDeckCollaborator(deck.id, testUser.id, "EDITOR");
+
+    const res = await request(app).delete(`/deck/${deck.id}`);
+
+    expect(res.status).toBe(403);
+  });
+});
+
+describe("VIEWER collaborator can only read", () => {
+  it("returns 403 when VIEWER tries to update the deck", async () => {
+    const owner = await createTestUser({ email: "viewer-owner@test.com" });
+    const deck = await createTestDeck(owner.id);
+    await createTestDeckCollaborator(deck.id, testUser.id, "VIEWER");
+
+    const res = await request(app)
+      .put(`/deck/${deck.id}`)
+      .send({ name: "Viewer Update" });
+
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 403 when VIEWER tries to delete the deck", async () => {
+    const owner = await createTestUser({ email: "viewer-delete@test.com" });
+    const deck = await createTestDeck(owner.id);
+    await createTestDeckCollaborator(deck.id, testUser.id, "VIEWER");
+
+    const res = await request(app).delete(`/deck/${deck.id}`);
+
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 200 when VIEWER reads a shared private deck", async () => {
+    const owner = await createTestUser({ email: "viewer-read@test.com" });
+    const deck = await createTestDeck(owner.id, { isPublic: false });
+    await createTestDeckCollaborator(deck.id, testUser.id, "VIEWER");
+
+    const res = await request(app).get(`/deck/${deck.id}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.id).toBe(deck.id);
   });
 });

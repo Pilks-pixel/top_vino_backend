@@ -27,6 +27,4 @@ export const SubmitReviewSchema = z.object({
 
 export type ReviewCreateInput = z.infer<typeof ReviewCreateSchema>;
 export type ProgressUpsertInput = z.infer<typeof ProgressUpsertSchema>;
-export type SubmitReviewInput = z.infer<typeof SubmitReviewSchema> & {
-  userId: string;
-};
+export type SubmitReviewInput = z.infer<typeof SubmitReviewSchema>;

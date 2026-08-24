@@ -13,7 +13,9 @@ import type {
   Deck,
   Card,
   UserCardProgress,
+  DeckCollaborator,
 } from "../../generated/prisma/client.js";
+import { CollaboratorRole } from "../../generated/prisma/index.js";
 
 // ─── User ────────────────────────────────────────────────────────────────────
 
@@ -97,6 +99,23 @@ export async function createTestProgress(
       correctStreak: overrides.correctStreak ?? 0,
       lastReviewedAt: overrides.lastReviewedAt ?? new Date(),
       nextReviewAt: overrides.nextReviewAt ?? new Date(),
+    },
+  });
+}
+
+// ─── DeckCollaborator ─────────────────────────────────────────────────────────
+
+export async function createTestDeckCollaborator(
+  deckId: string,
+  userId: string,
+  role: "EDITOR" | "VIEWER" = "VIEWER",
+): Promise<DeckCollaborator> {
+  return testPrisma.deckCollaborator.create({
+    data: {
+      deckId,
+      userId,
+      role:
+        role === "EDITOR" ? CollaboratorRole.EDITOR : CollaboratorRole.VIEWER,
     },
   });
 }
