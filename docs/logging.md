@@ -1,6 +1,6 @@
 # Logging
 
-The application logs through a single pino instance ([src/lib/logger.ts](../src/lib/logger.ts)). Every request handler, error path, and lifecycle event writes to it; nothing logs through `console`. The architectural rationale lives in ADR 0002 (`../../docs/adr/0002-logging-contract.md`); this page describes the behavior.
+The application logs through a single pino instance ([src/lib/logger.ts](../src/lib/logger.ts)). Every request handler, error path, and lifecycle event writes to it; nothing logs through `console`. The architectural rationale lives in ADR 0002 (`adr/0002-logging-contract.md`); this page describes the behavior.
 
 ## Transport
 
