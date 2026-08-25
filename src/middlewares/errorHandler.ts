@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { logger } from "../lib/logger.ts";
 import { AppError, ValidationError } from "../utils/appError.ts";
 import {
   handlePrismaError,
@@ -20,17 +21,11 @@ interface ErrorResponse {
  */
 const isDevelopment = process.env.NODE_ENV !== "production";
 
-/**
- * Logs error details to console
- * In Phase 5, this will be replaced with Winston/Pino structured logging
- */
 function logError(err: Error, isOperational: boolean): void {
   if (isOperational) {
-    // Operational errors: brief log
-    console.error(`[ERROR] ${err.message}`);
+    logger.warn({ err }, err.message);
   } else {
-    // Programming errors: full stack trace
-    console.error("[CRITICAL ERROR]", err);
+    logger.error({ err }, "Unhandled error");
   }
 }
 

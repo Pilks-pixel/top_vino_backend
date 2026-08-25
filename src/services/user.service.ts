@@ -1,6 +1,5 @@
 import { NotFoundError } from "../utils/appError.ts";
 import {
-  postUser,
   getAllUsers,
   getUserByID,
   putUserByID,
@@ -22,12 +21,6 @@ export async function readUserByID(id: string) {
     throw new NotFoundError("User", id);
   }
   return user;
-}
-
-export async function createUser(user: User) {
-  // Validation done with Zod in middleware
-  const newUser = await postUser(user);
-  return newUser;
 }
 
 export async function updateUser(id: string, data: Partial<User>) {

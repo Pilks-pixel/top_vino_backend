@@ -1,7 +1,7 @@
 # Top Vino Backend - Project Review & Roadmap
 
-**Date:** April 17, 2026  
-**Status:** In Development - Phase 2 TDD-First Kickoff
+**Date:** July 31, 2026  
+**Status:** In Development - Phase 3 (Authentication & Authorization) Complete
 
 ---
 
@@ -70,12 +70,33 @@
 - **Controller layer**: HTTP handlers (`src/routes/user/user.controller.ts`)
 - **Router**: RESTful endpoints (`src/routes/user/user.router.ts`)
   - `GET /user` - List all users
-  - `GET /user/auth/:email` - Get by email
+  - `GET /user/me` - Get the authenticated user (session-derived)
   - `GET /user/:id` - Get by ID
-  - `POST /user` - Create user
-  - `PUT /user/:id` - Update user
-  - `DELETE /user/:id` - Delete user
+  - `PUT /user/:id` - Update user (owner-only)
+  - `DELETE /user/:id` - Delete user (owner-only)
 - **Validation**: Zod schema validation middleware (`src/utils/userSchema.ts`)
+- ⚠️ `httpCreateUser` / `createUser` still exist in the controller and service but are **no longer wired to a route** — account creation now goes through Better Auth's `/api/auth/sign-up/email`. This is dead code left over from Phase 1; safe to delete once confirmed unused. See the "User creation flow" note below.
+
+### Deck, Card & Review Modules ✓ (COMPLETE — delivered in Phase 2)
+
+- **Deck**: model, service, controller, router with Zod validation (`src/routes/deck/`) — full CRUD, owner-scoped
+- **Card**: model, service, controller, router (`src/routes/card/`) — nested under `/deck/:deckId/cards`
+- **Review**: model, service, controller, router (`src/routes/review/`) — implements an SM-2-style spaced repetition scheduler (`review.service.ts`), tracking `currentInterval`, `easeFactor`, and `reviewCount` on `UserCardProgress`
+- All three modules are protected by `authMiddleware` and covered by both unit and integration tests
+
+### Authentication & Authorization ✓ (COMPLETE — Phase 3)
+
+- **Better Auth** integrated with the Prisma adapter (`src/lib/auth.ts`), using the project's custom `generated/prisma` client output
+- Email/password and Google OAuth enabled; Apple OAuth deferred to Phase 6 (requires Team ID/Key ID/`.p8` key)
+- Cookie-based sessions (7-day expiry, 1-day rolling `updateAge`, 5-minute cookie cache to avoid a DB hit on every request)
+- `customSession` plugin exposes `subscriptionType` on the session for FREE/PRO gating without an extra query
+- Better Auth handler mounted at `/api/auth/{*any}` **before** `express.json()`, with an `onAPIError` hook that normalizes Better Auth error responses into the same `{ success, status, statusCode, message }` shape used by `errorHandler`
+- **Authorization middleware** (`src/middlewares/`):
+  - `authMiddleware.ts` — resolves the session via `auth.api.getSession`, attaches `req.user`, throws `UnauthorizedError` (401) if absent
+  - `requireOwnership.ts` — 403s unless `req.user.id` matches the resource owner
+  - `requireRole.ts` — checks `DeckCollaborator` role (`EDITOR`/`VIEWER` enum) for shared-deck access
+  - `requireSubscription.ts` — gates PRO-only routes on `req.user.subscriptionType`
+- All four middlewares have unit tests; Deck/Card/Review/User routes apply them as needed
 
 ### Error Handling ✓ (COMPLETE)
 
@@ -98,40 +119,33 @@
 
 ### Critical Issues
 
-#### 1. Automated Testing Harness 🔴
+#### 1. Flaky integration tests under `--coverage` 🔴
 
-- No Jest test runner configured yet
-- No Supertest integration suite for HTTP behavior yet
-- No shared test helpers, fixtures, or database lifecycle utilities yet
-- Phase 1 behavior has been manually verified but not yet locked down with regression tests
+- `npm test` passes cleanly (130/130), but `npm run test:coverage` intermittently fails ~25 tests across `deck`, `card`, `review`, and `user` integration suites with 404s where 200/201/403 are expected, and occasional `PrismaClientKnownRequestError` unique-constraint violations from `factories.ts`.
+- Coverage instrumentation slows execution enough to expose a test-isolation race (most likely overlapping factory data / truncation timing between the `--runInBand` suites), not a real app bug.
+- Needs investigation before this can be trusted as a CI gate — see Phase 4/Phase 5 discussion below.
 
-#### 2. Core Feature Controllers 🔴
+#### 2. Stale generated Prisma client (found & fixed this session) ✅
 
-- `src/routes/CardController.ts` - **EMPTY**
-- `src/routes/DeckController.ts` - **EMPTY**
-- `src/routes/CardReviewController.ts` - **EMPTY**
+- `generated/prisma` was out of sync with `prisma/schema.prisma` (missing the `currentInterval` field added by the `add_current_interval_to_progress` migration), which broke TypeScript compilation for `review.service.ts` and failed 3 integration suites outright.
+- Fixed by running `npx prisma generate`. **Note for future:** re-run `prisma generate` after every schema/migration change — it isn't automatic in this project's dev workflow.
 
-#### 3. Core Feature Models 🔴
+#### 3. Dead code: unused `POST /user` creation path
 
-- `src/model/cardModel.ts` - **EMPTY**
-- `src/model/deckModel.ts` - **EMPTY**
-- Other models appear stub-only
+- `httpCreateUser` / `createUser` remain in `user.controller.ts` / `user.service.ts` but are no longer mounted on `user.router.ts` now that Better Auth owns sign-up. Low risk, but should be deleted or explicitly repurposed (e.g., admin-only user creation) to avoid confusion.
 
 ### Missing Features
 
-- No authentication/authorization system
-- No JWT or session management
-- No password hashing (users have no password field!)
-- No input sanitization
+- No input sanitization beyond Zod validation
 - No rate limiting
 - No API documentation (Swagger/OpenAPI)
-- No environment variable validation
-- No automated testing infrastructure installed yet (Jest/Supertest planned as Phase 2 kickoff)
-- No CI/CD pipeline
+- No environment variable validation on startup
+- No CI/CD pipeline (no `.github/workflows` yet)
 - No production deployment configuration
-- No health check endpoints
+- No health check endpoint
 - No graceful shutdown handling
 - No database connection pooling configuration
+- Apple OAuth not yet configured (deferred to Phase 6)
 
 ---
 
@@ -175,6 +189,8 @@
 ---
 
 ### PHASE 2: TDD Foundation + Core CRUD Vertical Slices (3-5 days)
+
+**Status: COMPLETE** — Jest/Supertest harness, Deck/Card/Review modules, and regression coverage for Phase 1 error handling are all in place.
 
 **Start with tests, then implement Deck, Card, and Card Review slices incrementally**
 
@@ -229,6 +245,8 @@
 ---
 
 ### PHASE 3: Authentication & Authorization via Better Auth (2-3 days)
+
+**Status: COMPLETE**
 
 Authentication is handled by [Better Auth](https://better-auth.com/) with the Prisma adapter. The frontend triggers sign-in/sign-up flows (email/password, Google, Apple); the backend validates Better Auth cookie-based sessions and enforces authorization decisions.
 
@@ -413,33 +431,33 @@ module.exports = {
 - Automated deployment on merge to main
 - Blue-green deployments
 
+> ⚠️ **Split CI from CD.** The *deployment* automation above genuinely depends on picking a hosting option in Phase 6. But *continuous integration* — running lint, `check-types`, and `npm test` on every PR — has no dependency on hosting and is cheap to add now. Don't wait for Phase 6 to get a basic GitHub Actions test-on-PR workflow in place; it should happen as soon as the coverage flakiness (see Critical Issues) is resolved.
+
 ---
 
 ## 📊 Recommended Timeline
 
-### Week 1-2: Foundation
+### Weeks 1-3: Foundation & Security — ✅ complete
 
-- Phase 1: Error Handling ✓ complete
-- Phase 2 kickoff: test harness + Phase 1 regression coverage
-- Phase 2 delivery: Deck and Card slices
+- Phase 1: Error Handling
+- Phase 2: Test harness + Deck/Card/Review slices
+- Phase 3: Authentication & Authorization (Better Auth)
 
-### Week 3: Security
+### Now: Stabilize before expanding
 
-- Phase 2 delivery: Card Review slice
-- Phase 3: Authentication & Authorization
+- Fix coverage-mode test flakiness (Critical Issue #1)
+- Stand up a minimal CI workflow (lint + types + tests on PR)
+- Clean up dead `POST /user` code path
 
-### Week 4: Quality
+### Next: Production hardening (Phase 5), test expansion as-needed (Phase 4)
 
-- Phase 4: Test expansion and quality gates
+- Phase 5: env validation, security middleware, structured logging, health check, graceful shutdown
+- Phase 4: fold in as gaps are discovered rather than as a dedicated block of work
 
-### Week 5: Production
+### Later: Deployment (Phase 6)
 
-- Phase 5: Production Readiness
-- Phase 6A: Simple PM2 deployment
-
-### Week 6+ (Optional):
-
-- Phase 6B: Cloud deployment
+- Phase 6A: Simple PM2 deployment, or
+- Phase 6B: Cloud-native deployment + CD pipeline (build on the CI workflow started above)
 - Performance optimization
 - Caching layer (Redis)
 - Real-time features (WebSockets)
@@ -449,11 +467,11 @@ module.exports = {
 
 ## 🎯 Immediate Next Steps
 
-1. Set up Jest, Supertest, and shared test helpers
-2. Backfill automated tests for completed Phase 1 error handling and User flows
-3. Implement Deck, Card, and Card Review slices using TDD
-4. Add authentication once core CRUD behavior is covered by tests
-5. Continue production hardening after functional coverage improves
+1. Investigate and fix the coverage-mode test flakiness (see Critical Issue #1) — this blocks trusting `test:coverage` as a quality gate
+2. Stand up a minimal CI workflow (lint + `check-types` + `npm test`) so regressions are caught on every PR, independent of the Phase 6 deployment timeline
+3. Decide the fate of the unused `POST /user` creation path
+4. Prioritize Phase 5 security/production hardening items (rate limiting, helmet, env validation, health check) over broad Phase 4 test-coverage expansion — see discussion below
+5. Revisit Phase 4 (deeper test coverage) opportunistically as gaps are found, rather than as a dedicated phase
 
 ---
 
@@ -464,30 +482,43 @@ module.exports = {
 ```
 server/
 ├── src/
-│   ├── app.ts                 # Express app configuration
-│   ├── server.ts              # Server entry point
+│   ├── app.ts                  # Express app config — mounts Better Auth before express.json()
+│   ├── server.ts               # Server entry point
 │   ├── lib/
-│   │   └── prisma.ts          # Prisma client instance
+│   │   ├── auth.ts             # Better Auth config: Prisma adapter, sessions, customSession, onAPIError (COMPLETE)
+│   │   └── prisma.ts           # Prisma client instance
 │   ├── middlewares/
-│   │   ├── errorHandler.ts    # Global error handler (COMPLETE)
-│   │   └── validationMiddleware.ts  # Zod validation wired into error handling
-│   ├── model/                 # Data access layer
-│   │   └── usersModel.ts      # User CRUD operations (COMPLETE)
-│   ├── routes/                # Controllers & routes
-│   │   └── user/
-│   │       ├── user.controller.ts  # User HTTP handlers (COMPLETE)
-│   │       └── user.router.ts      # User routes (COMPLETE)
-│   ├── services/              # Business logic layer
-│   │   └── user.service.ts    # User service (COMPLETE)
+│   │   ├── authMiddleware.ts       # Resolves Better Auth session -> req.user (COMPLETE)
+│   │   ├── requireOwnership.ts     # 403 unless req.user.id owns the resource (COMPLETE)
+│   │   ├── requireRole.ts          # DeckCollaborator role check (COMPLETE)
+│   │   ├── requireSubscription.ts  # FREE/PRO gating (COMPLETE)
+│   │   ├── errorHandler.ts         # Global error handler (COMPLETE)
+│   │   └── validationMiddleware.ts # Zod validation wired into error handling
+│   ├── model/                  # Data access layer
+│   │   ├── usersModel.ts       # User CRUD operations (COMPLETE)
+│   │   ├── deckModel.ts        # Deck CRUD (COMPLETE)
+│   │   ├── cardModel.ts        # Card CRUD (COMPLETE)
+│   │   └── reviewModel.ts      # Review CRUD (COMPLETE)
+│   ├── routes/                 # Controllers & routes
+│   │   ├── user/                # GET /, GET /me, GET /:id, PUT /:id, DELETE /:id (COMPLETE)
+│   │   ├── deck/                 # Full CRUD, owner-scoped (COMPLETE)
+│   │   ├── card/                 # Nested under /deck/:deckId/cards (COMPLETE)
+│   │   └── review/                # Review submission + SM-2 scheduling (COMPLETE)
+│   ├── services/                # Business logic layer
+│   │   ├── user.service.ts      # User service (COMPLETE)
+│   │   ├── deck.service.ts      # Deck service (COMPLETE)
+│   │   ├── card.service.ts      # Card service (COMPLETE)
+│   │   └── review.service.ts    # SM-2 spaced repetition logic (COMPLETE)
 │   └── utils/
-│       ├── appError.ts        # Custom error classes (COMPLETE)
-│       ├── catchAsync.ts      # Async controller wrapper
+│       ├── appError.ts          # Custom error classes (COMPLETE)
+│       ├── catchAsync.ts        # Async controller wrapper
 │       ├── prismaErrorHandler.ts # Prisma error translation
-│       └── userSchema.ts      # Zod schemas (COMPLETE)
+│       ├── userSchema.ts / deckSchema.ts / cardSchema.ts / reviewSchema.ts # Zod schemas (COMPLETE)
 ├── prisma/
-│   └── schema.prisma          # Database schema (COMPLETE)
-├── docker-compose.yml         # Local development setup
-└── package.json               # Dependencies
+│   └── schema.prisma           # Database schema incl. Better Auth models (COMPLETE)
+├── generated/prisma/           # Custom Prisma client output — re-run `npx prisma generate` after schema changes
+├── docker-compose.yml          # Local development setup
+└── package.json                # Dependencies
 ```
 
 ---
@@ -497,7 +528,9 @@ server/
 - **Runtime**: Node.js with TypeScript
 - **Framework**: Express.js v5
 - **Database**: PostgreSQL with Prisma ORM
+- **Auth**: Better Auth (Prisma adapter, cookie sessions, email/password + Google OAuth)
 - **Validation**: Zod
+- **Testing**: Jest, Supertest, ts-jest (ESM)
 - **Development**: Docker, Hot-reload
 - **Code Quality**: ESLint, Prettier, Husky
 
@@ -505,9 +538,9 @@ server/
 
 ## 📝 Notes
 
-- Phase 1 error handling has been completed and manually verified
-- User module is complete and serves as a template for other modules
-- The roadmap now treats testing as part of feature delivery, not a later standalone phase
-- The next implementation step is test harness setup plus Phase 1 regression coverage
-- Authentication system needs to be added before production
+- Phase 1 error handling has been completed and covered by regression tests
+- Phase 2 (Deck/Card/Review CRUD) and Phase 3 (Better Auth) are both complete
+- User account creation now flows entirely through Better Auth (`/api/auth/sign-up/email`), not the app's own `POST /user` route
+- The roadmap treats testing as part of feature delivery, not a later standalone phase
+- Coverage-mode test flakiness (see Critical Issues) should be resolved before adding a CI gate
 - Docker setup is ready for development but needs production optimization

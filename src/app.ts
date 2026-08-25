@@ -1,29 +1,53 @@
 import express from "express";
 import cors from "cors";
-import morgan from "morgan";
+import { pinoHttp } from "pino-http";
+import helmet from "helmet";
 import { toNodeHandler } from "better-auth/node";
 
-import { auth } from "../src/lib/auth.ts";
-import userRouter from "../src/routes/user/user.router.ts";
-import deckRouter from "../src/routes/deck/deck.router.ts";
-import cardRouter from "../src/routes/card/card.router.ts";
-import reviewRouter from "../src/routes/review/review.router.ts";
-import { errorHandler } from "../src/middlewares/errorHandler.ts";
+import { auth } from "./lib/auth.ts";
+import { logger } from "./lib/logger.ts";
+import prisma from "./lib/prisma.ts";
+import userRouter from "./routes/user/user.router.ts";
+import deckRouter from "./routes/deck/deck.router.ts";
+import cardRouter from "./routes/card/card.router.ts";
+import reviewRouter from "./routes/review/review.router.ts";
+import { errorHandler } from "./middlewares/errorHandler.ts";
+import { authLimiter, generalLimiter } from "./config/rateLimits.ts";
 
 var app = express();
 
+app.use("/api/auth", authLimiter);
 app.all("/api/auth/{*any}", toNodeHandler(auth));
+app.use(helmet());
 app.use(
   cors({
     origin: process.env.FRONTEND_URL ?? "http://localhost:3000",
     credentials: true,
   }),
 );
-app.use(morgan("combined"));
-app.use(express.json());
+app.use(pinoHttp({ logger }));
+app.use(express.json({ limit: "10kb" }));
+app.use(generalLimiter);
 
 app.get("/", async (_req, res) => {
   res.send("Hello World!");
+});
+
+app.get("/health", (_req, res) => {
+  res.json({
+    status: "ok",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.get("/ready", async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: "ready" });
+  } catch {
+    res.status(503).json({ status: "unavailable" });
+  }
 });
 
 app.use("/user", userRouter);
