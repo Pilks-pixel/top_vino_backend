@@ -15,7 +15,6 @@ function validationMiddleware(schema: z.ZodType) {
 
     if (!result.success) {
       const formattedErrors = z.treeifyError(result.error);
-      console.log(formattedErrors);
       throw new ValidationError("Validation failed", formattedErrors);
     }
 

@@ -2,8 +2,10 @@ import type { Request, Response, NextFunction } from "express";
 import { logger } from "../lib/logger.ts";
 import { AppError, ValidationError } from "../utils/appError.ts";
 import {
+  getPrismaErrorLogMetadata,
   handlePrismaError,
   isPrismaError,
+  isExpectedPrismaError,
   isPrismaValidationError,
 } from "../utils/prismaErrorHandler.ts";
 
@@ -21,11 +23,64 @@ interface ErrorResponse {
  */
 const isDevelopment = process.env.NODE_ENV !== "production";
 
-function logError(err: Error, isOperational: boolean): void {
+function safeStack(error: Error): string | undefined {
+  if (!error.stack) return undefined;
+
+  const stackLines = error.stack.split("\n").slice(1);
+  return stackLines.length > 0 ? stackLines.join("\n") : undefined;
+}
+
+function logError(
+  err: Error,
+  isOperational: boolean,
+  requestLogger: typeof logger,
+  req: Request,
+  originalError: Error,
+): void {
+  const error = err as AppError;
+  const isPersistenceFailure =
+    isPrismaError(originalError) || isPrismaValidationError(originalError);
+  const metadata = {
+    event: isPersistenceFailure
+      ? "persistence_failure"
+      : error instanceof ValidationError
+        ? "validation_failure"
+        : isOperational
+          ? "request_failure"
+          : "application_failure",
+    route: req.originalUrl.split("?", 1)[0],
+    statusCode: error.status,
+    requestId: req.id,
+    errorType: originalError.constructor.name,
+    ...(isPrismaError(originalError)
+      ? getPrismaErrorLogMetadata(originalError)
+      : isPrismaValidationError(originalError)
+        ? { errorCode: "VALIDATION" }
+        : {}),
+  };
+
+  if (isPersistenceFailure) {
+    if (isPrismaError(originalError) && isExpectedPrismaError(originalError)) {
+      requestLogger.warn(metadata, "Persistence request failed");
+    } else {
+      requestLogger.error(metadata, "Persistence failure");
+    }
+    return;
+  }
+
+  if (error instanceof ValidationError) {
+    requestLogger.warn(metadata, "Request validation failed");
+    return;
+  }
+
   if (isOperational) {
-    logger.warn({ err }, err.message);
+    requestLogger.warn(metadata, error.message);
   } else {
-    logger.error({ err }, "Unhandled error");
+    const stack = safeStack(error);
+    requestLogger.error(
+      stack ? { ...metadata, stack } : metadata,
+      "Unhandled error",
+    );
   }
 }
 
@@ -69,11 +124,12 @@ function createErrorResponse(
  * - Development: includes stack traces
  * - Production: sanitizes error messages
  */
-export function errorHandler(
+function handleError(
   err: Error,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction,
+  applicationLogger: typeof logger,
 ): void {
   let error: AppError;
 
@@ -84,7 +140,7 @@ export function errorHandler(
   // Handle Prisma validation errors
   else if (isPrismaValidationError(err)) {
     error = new AppError("Invalid database query", 400);
-    error.isOperational = true;
+    error.isOperational = false;
   }
   // Handle existing AppError instances
   else if (err instanceof AppError) {
@@ -101,9 +157,22 @@ export function errorHandler(
   }
 
   // Log the error
-  logError(error, error.isOperational);
+  logError(error, error.isOperational, req.log ?? applicationLogger, req, err);
 
   // Send response
   const response = createErrorResponse(error, isDevelopment);
   res.status(response.statusCode).json(response);
 }
+
+export function createErrorHandler(applicationLogger = logger) {
+  return function errorHandler(
+    err: Error,
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): void {
+    handleError(err, req, res, next, applicationLogger);
+  };
+}
+
+export const errorHandler = createErrorHandler();
