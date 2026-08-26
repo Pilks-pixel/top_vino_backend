@@ -8,10 +8,17 @@ export const SubscriptionTier = z.enum(["FREE", "PRO"]);
 
 export type SubscriptionTier = z.infer<typeof SubscriptionTier>;
 
-export const User = z.strictObject({
+export const UserProfile = z.strictObject({
+  id: z.string(),
   email: z.email(),
-  name: z.string().optional(),
+  name: z.string().nullable(),
   subscriptionType: SubscriptionTier,
 });
 
-export type User = z.infer<typeof User>;
+export type UserProfile = z.infer<typeof UserProfile>;
+
+export const UserUpdate = z.strictObject({
+  name: z.string(),
+});
+
+export type UserUpdate = z.infer<typeof UserUpdate>;

@@ -1,19 +1,10 @@
 import { NotFoundError } from "../utils/appError.ts";
 import {
-  getAllUsers,
   getUserByID,
   putUserByID,
   deleteUserByID,
 } from "../model/usersModel.ts";
-import type { User } from "../utils/userSchema.ts";
-
-export async function readUsers() {
-  const users = await getAllUsers();
-  if (!users || users.length === 0) {
-    throw new NotFoundError("Users");
-  }
-  return users;
-}
+import type { UserUpdate } from "../utils/userSchema.ts";
 
 export async function readUserByID(id: string) {
   const user = await getUserByID(id);
@@ -23,7 +14,7 @@ export async function readUserByID(id: string) {
   return user;
 }
 
-export async function updateUser(id: string, data: Partial<User>) {
+export async function updateUser(id: string, data: UserUpdate) {
   // First check if user exists
   const existingUser = await getUserByID(id);
   if (!existingUser) {

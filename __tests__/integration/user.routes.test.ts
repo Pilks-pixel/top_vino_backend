@@ -50,8 +50,12 @@ describe("GET /user/:id", () => {
     const res = await request(app).get(`/user/${user.id}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.id).toBe(user.id);
-    expect(res.body.data.passwordHash).toBeUndefined();
+    expect(res.body.data).toEqual({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      subscriptionType: user.subscriptionType,
+    });
   });
 
   it("returns 404 for non-existent id", async () => {
@@ -64,19 +68,48 @@ describe("GET /user/:id", () => {
   });
 });
 
+describe("GET /user/me", () => {
+  it("resolves the current-user route before the id route", async () => {
+    const res = await request(app).get("/user/me");
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({
+      id: testUser.id,
+      name: expect.any(String),
+      email: testUser.email,
+      subscriptionType: testUser.subscriptionType,
+    });
+  });
+});
+
 // ─── PUT /user/:id ────────────────────────────────────────────────────────────
 
 describe("PUT /user/:id", () => {
   it("updates and returns the user", async () => {
-    const res = await request(app).put(`/user/${testUser.id}`).send({
+    const res = await request(app)
+      .put(`/user/${testUser.id}`)
+      .send({ name: "Updated Name" });
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({
+      id: testUser.id,
       name: "Updated Name",
       email: testUser.email,
-      subscriptionType: "PRO",
+      subscriptionType: "FREE",
     });
-    expect(res.status).toBe(200);
-    expect(res.body.data.name).toBe("Updated Name");
-    expect(res.body.data.subscriptionType).toBe("PRO");
-    expect(res.body.data.passwordHash).toBeUndefined();
+  });
+
+  it.each([
+    { name: "Updated Name", email: "new@example.com" },
+    { name: "Updated Name", subscriptionType: "PRO" },
+  ])("rejects immutable profile fields: %p", async body => {
+    const res = await request(app).put(`/user/${testUser.id}`).send(body);
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      success: false,
+      status: "error",
+      statusCode: 400,
+    });
   });
 
   it("returns 404 for non-existent user", async () => {
@@ -94,7 +127,7 @@ describe("PUT /user/:id", () => {
 
     const res = await request(app)
       .put(`/user/${missingUserId}`)
-      .send({ name: "XX", email: "x@x.com", subscriptionType: "FREE" });
+      .send({ name: "XX" });
 
     expect(res.status).toBe(404);
   });
@@ -106,8 +139,6 @@ describe("PUT /user/:id", () => {
 
     const res = await request(app).put(`/user/${testUser.id}`).send({
       name: "Updated Name",
-      email: testUser.email,
-      subscriptionType: "PRO",
     });
 
     expect(res.status).toBe(401);
@@ -128,11 +159,17 @@ describe("PUT /user/:id", () => {
 
     const res = await request(app).put(`/user/${testUser.id}`).send({
       name: "Updated Name",
-      email: testUser.email,
-      subscriptionType: "PRO",
     });
 
     expect(res.status).toBe(403);
+  });
+});
+
+describe("GET /user", () => {
+  it("does not expose a global user listing", async () => {
+    const res = await request(app).get("/user");
+
+    expect(res.status).toBe(404);
   });
 });
 
