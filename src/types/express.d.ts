@@ -1,4 +1,4 @@
-import "express";
+import type { SubscriptionTier } from "../utils/userSchema.ts";
 
 declare global {
   namespace Express {
@@ -6,7 +6,7 @@ declare global {
       user: {
         id: string;
         email: string;
-        subscriptionType: "FREE" | "PRO";
+        subscriptionType: SubscriptionTier;
       };
     }
   }
