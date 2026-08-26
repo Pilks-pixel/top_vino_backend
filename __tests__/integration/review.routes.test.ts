@@ -20,6 +20,8 @@ const { app } = await import("../setup/testApp.js");
 const { cleanDb, disconnectDb } = await import("../setup/testDb.js");
 const { createTestUser, createTestDeck, createTestCard, createTestProgress } =
   await import("../setup/factories.js");
+const { ReviewSubmitResponse, DueCardsResponse, ProgressResponse } =
+  await import("../../src/utils/responseSchema.js");
 
 let testUser: { id: string; email: string; subscriptionType: string };
 
@@ -54,6 +56,7 @@ describe("POST /review", () => {
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
+    ReviewSubmitResponse.parse(res.body);
     expect(res.body.data.review).toBeDefined();
     expect(res.body.data.progress).toBeDefined();
   });
@@ -167,6 +170,7 @@ describe("GET /review/due", () => {
     const res = await request(app).get("/review/due");
 
     expect(res.status).toBe(200);
+    DueCardsResponse.parse(res.body);
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0].id).toBe(dueCard.id);
   });
@@ -205,6 +209,7 @@ describe("GET /review/progress/:cardId", () => {
     const res = await request(app).get(`/review/progress/${card.id}`);
 
     expect(res.status).toBe(200);
+    ProgressResponse.parse(res.body);
     expect(res.body.data.userId).toBe(testUser.id);
     expect(res.body.data.cardId).toBe(card.id);
   });
@@ -223,6 +228,19 @@ describe("GET /review/progress/:cardId", () => {
     );
 
     expect(res.status).toBe(404);
+  });
+
+  it("returns 400 with the validation envelope when cardId is not a UUID", async () => {
+    const res = await request(app).get("/review/progress/not-a-uuid");
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      success: false,
+      status: "error",
+      statusCode: 400,
+      message: "Validation failed",
+    });
+    expect(res.body.details).toBeDefined();
   });
 
   it("returns 401 when unauthenticated", async () => {

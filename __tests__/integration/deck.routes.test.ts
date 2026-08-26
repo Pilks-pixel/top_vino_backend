@@ -22,6 +22,9 @@ const { app } = await import("../setup/testApp.js");
 const { cleanDb, disconnectDb } = await import("../setup/testDb.js");
 const { createTestUser, createTestDeck, createTestDeckCollaborator } =
   await import("../setup/factories.js");
+const { DeckListResponse, DeckResponse, DeckDeleteResponse } = await import(
+  "../../src/utils/responseSchema.js"
+);
 
 // consider if subscriptionType should be a union type or enum instead of string
 let testUser: { id: string; email: string; subscriptionType: string };
@@ -54,6 +57,7 @@ describe("POST /deck", () => {
     });
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
+    DeckResponse.parse(res.body);
     expect(res.body.data).toMatchObject({
       name: "French Vocab",
       userId: testUser.id,
@@ -87,6 +91,7 @@ describe("GET /deck", () => {
     const res = await request(app).get("/deck");
 
     expect(res.status).toBe(200);
+    DeckListResponse.parse(res.body);
     expect(res.body.data).toHaveLength(2);
   });
 
@@ -107,6 +112,34 @@ describe("GET /deck", () => {
     expect(res.body.data[0].userId).toBe(otherUser.id);
   });
 
+  it("returns 400 with the validation envelope when userId is not a UUID", async () => {
+    const res = await request(app).get("/deck?userId=not-a-uuid");
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      success: false,
+      status: "error",
+      statusCode: 400,
+      message: "Validation failed",
+    });
+    expect(res.body.details).toBeDefined();
+  });
+
+  it("returns 400 with the validation envelope when userId is repeated", async () => {
+    const res = await request(app).get(
+      "/deck?userId=00000000-0000-0000-0000-000000000000&userId=11111111-1111-1111-1111-111111111111",
+    );
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      success: false,
+      status: "error",
+      statusCode: 400,
+      message: "Validation failed",
+    });
+    expect(res.body.details).toBeDefined();
+  });
+
   it("returns 401 when unauthenticated", async () => {
     (
       auth.api.getSession as unknown as ReturnType<typeof jest.fn>
@@ -125,6 +158,7 @@ describe("GET /deck/:id", () => {
     const deck = await createTestDeck(testUser.id);
     const res = await request(app).get(`/deck/${deck.id}`);
     expect(res.status).toBe(200);
+    DeckResponse.parse(res.body);
     expect(res.body.data.id).toBe(deck.id);
   });
 
@@ -150,6 +184,19 @@ describe("GET /deck/:id", () => {
     expect(res.status).toBe(404);
   });
 
+  it("returns 400 with the validation envelope when id is not a UUID", async () => {
+    const res = await request(app).get("/deck/not-a-uuid");
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      success: false,
+      status: "error",
+      statusCode: 400,
+      message: "Validation failed",
+    });
+    expect(res.body.details).toBeDefined();
+  });
+
   it("returns 401 when unauthenticated", async () => {
     const deck = await createTestDeck(testUser.id);
     (
@@ -171,6 +218,7 @@ describe("PUT /deck/:id", () => {
       .send({ name: "Updated Deck", topic: "Updated Topic", isPublic: true });
 
     expect(res.status).toBe(200);
+    DeckResponse.parse(res.body);
     expect(res.body.data.name).toBe("Updated Deck");
   });
 
@@ -219,6 +267,7 @@ describe("DELETE /deck/:id", () => {
     const res = await request(app).delete(`/deck/${deck.id}`);
 
     expect(res.status).toBe(200);
+    DeckDeleteResponse.parse(res.body);
     expect(res.body.message).toBe("Deck deleted successfully");
   });
 

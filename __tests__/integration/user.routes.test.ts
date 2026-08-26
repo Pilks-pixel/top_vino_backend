@@ -22,6 +22,9 @@ const { auth } = await import("../../src/lib/auth.js");
 const { app } = await import("../setup/testApp.js");
 const { cleanDb, disconnectDb } = await import("../setup/testDb.js");
 const { createTestUser } = await import("../setup/factories.js");
+const { UserProfileResponse, UserDeleteResponse } = await import(
+  "../../src/utils/responseSchema.js"
+);
 
 let testUser: { id: string; email: string; subscriptionType: string };
 
@@ -50,6 +53,7 @@ describe("GET /user/:id", () => {
     const res = await request(app).get(`/user/${user.id}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
+    UserProfileResponse.parse(res.body);
     expect(res.body.data).toEqual({
       id: user.id,
       name: user.name,
@@ -66,6 +70,19 @@ describe("GET /user/:id", () => {
     expect(res.body.success).toBe(false);
     expect(res.body.statusCode).toBe(404);
   });
+
+  it("returns 400 with the validation envelope when id is not a UUID", async () => {
+    const res = await request(app).get("/user/not-a-uuid");
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      success: false,
+      status: "error",
+      statusCode: 400,
+      message: "Validation failed",
+    });
+    expect(res.body.details).toBeDefined();
+  });
 });
 
 describe("GET /user/me", () => {
@@ -73,6 +90,7 @@ describe("GET /user/me", () => {
     const res = await request(app).get("/user/me");
 
     expect(res.status).toBe(200);
+    UserProfileResponse.parse(res.body);
     expect(res.body.data).toEqual({
       id: testUser.id,
       name: expect.any(String),
@@ -90,6 +108,7 @@ describe("PUT /user/:id", () => {
       .put(`/user/${testUser.id}`)
       .send({ name: "Updated Name" });
     expect(res.status).toBe(200);
+    UserProfileResponse.parse(res.body);
     expect(res.body.data).toEqual({
       id: testUser.id,
       name: "Updated Name",
@@ -179,6 +198,7 @@ describe("DELETE /user/:id", () => {
   it("deletes user and returns success message", async () => {
     const res = await request(app).delete(`/user/${testUser.id}`);
     expect(res.status).toBe(200);
+    UserDeleteResponse.parse(res.body);
     expect(res.body.message).toBe("User deleted successfully");
   });
 

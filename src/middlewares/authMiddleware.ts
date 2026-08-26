@@ -1,5 +1,4 @@
 import { fromNodeHeaders } from "better-auth/node";
-
 import { auth } from "../lib/auth.ts";
 import { catchAsync } from "../utils/catchAsync.ts";
 import { UnauthorizedError } from "../utils/appError.ts";

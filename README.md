@@ -43,10 +43,10 @@ Copy `.env.example` to `.env` and fill in the required values before starting.
 - Structured logging via pino with redaction and request correlation (`/health` and `/ready` endpoints included)
 - Graceful shutdown on SIGTERM/SIGINT
 - Jest + Supertest harness against a dedicated test database; coverage runs reliably green
+- Minimal CI workflow: lint + typecheck + tests on every PR
 
 ### Next Up 📌
 
-- Minimal CI workflow: lint + typecheck + tests on every PR
 - API contract documentation (OpenAPI or equivalent) ahead of frontend work
 - Frontend application
 

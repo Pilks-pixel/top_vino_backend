@@ -9,24 +9,34 @@ import {
 import validationMiddleware from "../../middlewares/validationMiddleware.ts";
 import { authMiddleware } from "../../middlewares/authMiddleware.ts";
 import { CreateCardSchema, UpdateCardSchema } from "../../utils/cardSchema.ts";
+import {
+  DeckCardParamsSchema,
+  DeckIdParamsSchema,
+} from "../../utils/paramsSchema.ts";
 
 // Mounted at /deck/:deckId/cards
 const cardRouter = express.Router({ mergeParams: true });
 
-cardRouter.get("/", authMiddleware, httpListCards);
-cardRouter.get("/:id", authMiddleware, httpGetCard);
-cardRouter.post(
-  "/",
-  authMiddleware,
-  validationMiddleware(CreateCardSchema),
-  httpCreateCard,
+cardRouter.use(authMiddleware);
+cardRouter.use(validationMiddleware(DeckIdParamsSchema, "params"));
+
+cardRouter.get("/", httpListCards);
+cardRouter.get(
+  "/:id",
+  validationMiddleware(DeckCardParamsSchema, "params"),
+  httpGetCard,
 );
+cardRouter.post("/", validationMiddleware(CreateCardSchema), httpCreateCard);
 cardRouter.put(
   "/:id",
-  authMiddleware,
+  validationMiddleware(DeckCardParamsSchema, "params"),
   validationMiddleware(UpdateCardSchema),
   httpUpdateCard,
 );
-cardRouter.delete("/:id", authMiddleware, httpDeleteCard);
+cardRouter.delete(
+  "/:id",
+  validationMiddleware(DeckCardParamsSchema, "params"),
+  httpDeleteCard,
+);
 
 export default cardRouter;

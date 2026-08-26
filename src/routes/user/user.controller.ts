@@ -7,6 +7,11 @@ import {
 import type { UserProfile, UserUpdate } from "../../utils/userSchema.ts";
 import { catchAsync } from "../../utils/catchAsync.ts";
 
+/**
+ * Converts a Prisma user object to a UserProfile DTO object (zod).
+ * @param user - The user object to convert.
+ * @returns The UserProfile object.
+ */
 function toUserProfile(user: {
   id: string;
   name: string | null;

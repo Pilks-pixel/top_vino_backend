@@ -27,6 +27,9 @@ const {
   createTestCard,
   createTestDeckCollaborator,
 } = await import("../setup/factories.js");
+const { CardListResponse, CardResponse, CardDeleteResponse } = await import(
+  "../../src/utils/responseSchema.js"
+);
 
 let testUser: { id: string; email: string; subscriptionType: string };
 
@@ -63,6 +66,7 @@ describe("POST /deck/:deckId/cards", () => {
       .send(basicCard);
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
+    CardResponse.parse(res.body);
     expect(res.body.data.question).toBe(basicCard.question);
     expect(res.body.data.deckId).toBe(deck.id);
   });
@@ -136,6 +140,7 @@ describe("GET /deck/:deckId/cards", () => {
     await createTestCard(deck.id, { question: "Q2" });
     const res = await request(app).get(`/deck/${deck.id}/cards`);
     expect(res.status).toBe(200);
+    CardListResponse.parse(res.body);
     expect(res.body.data).toHaveLength(2);
   });
 
@@ -151,6 +156,19 @@ describe("GET /deck/:deckId/cards", () => {
       "/deck/00000000-0000-0000-0000-000000000000/cards",
     );
     expect(res.status).toBe(404);
+  });
+
+  it("returns 400 with the validation envelope when deckId is not a UUID", async () => {
+    const res = await request(app).get("/deck/not-a-uuid/cards");
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      success: false,
+      status: "error",
+      statusCode: 400,
+      message: "Validation failed",
+    });
+    expect(res.body.details).toBeDefined();
   });
 
   it("returns 401 when unauthenticated", async () => {
@@ -190,6 +208,7 @@ describe("GET /deck/:deckId/cards/:id", () => {
     const card = await createTestCard(deck.id);
     const res = await request(app).get(`/deck/${deck.id}/cards/${card.id}`);
     expect(res.status).toBe(200);
+    CardResponse.parse(res.body);
     expect(res.body.data.id).toBe(card.id);
   });
 
@@ -199,6 +218,20 @@ describe("GET /deck/:deckId/cards/:id", () => {
       `/deck/${deck.id}/cards/00000000-0000-0000-0000-000000000000`,
     );
     expect(res.status).toBe(404);
+  });
+
+  it("returns 400 with the validation envelope when card id is not a UUID", async () => {
+    const deck = await createTestDeck(testUser.id);
+    const res = await request(app).get(`/deck/${deck.id}/cards/not-a-uuid`);
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      success: false,
+      status: "error",
+      statusCode: 400,
+      message: "Validation failed",
+    });
+    expect(res.body.details).toBeDefined();
   });
 
   it("returns 401 when unauthenticated", async () => {
@@ -241,6 +274,7 @@ describe("PUT /deck/:deckId/cards/:id", () => {
       .put(`/deck/${deck.id}/cards/${card.id}`)
       .send({ question: "Updated question?" });
     expect(res.status).toBe(200);
+    CardResponse.parse(res.body);
     expect(res.body.data.question).toBe("Updated question?");
   });
 
@@ -298,6 +332,7 @@ describe("DELETE /deck/:deckId/cards/:id", () => {
     const card = await createTestCard(deck.id);
     const res = await request(app).delete(`/deck/${deck.id}/cards/${card.id}`);
     expect(res.status).toBe(200);
+    CardDeleteResponse.parse(res.body);
     expect(res.body.message).toBe("Card deleted successfully");
   });
 

@@ -12,5 +12,10 @@ export const UpdateDeckSchema = z.strictObject({
   isPublic: z.boolean().optional(),
 });
 
+export const ListDecksQuerySchema = z.object({
+  userId: z.uuid().optional(),
+});
+
 export type CreateDeckInput = z.infer<typeof CreateDeckSchema>;
 export type UpdateDeckInput = z.infer<typeof UpdateDeckSchema>;
+export type ListDecksQuery = z.infer<typeof ListDecksQuerySchema>;
