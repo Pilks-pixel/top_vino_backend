@@ -16,6 +16,7 @@ import type {
   DeckCollaborator,
 } from "../../generated/prisma/client.js";
 import { CollaboratorRole } from "../../generated/prisma/index.js";
+import type { SubscriptionTier } from "../../src/utils/userSchema.ts";
 
 // ─── User ────────────────────────────────────────────────────────────────────
 
@@ -23,7 +24,7 @@ export async function createTestUser(
   overrides: Partial<{
     name: string;
     email: string;
-    subscriptionType: "FREE" | "PRO";
+    subscriptionType: SubscriptionTier;
   }> = {},
 ): Promise<User> {
   return testPrisma.user.create({
