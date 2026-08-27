@@ -7,7 +7,7 @@
     "pretest": "echo '[prereq] PostgreSQL must be running before tests. Start it with: docker compose up -d postgres'",
     "test": "node --experimental-vm-modules node_modules/.bin/jest --runInBand",
     "test:unit": "node --experimental-vm-modules node_modules/.bin/jest --testPathPatterns='__tests__/unit'",
-    "test:integration": "node --experimental-vm-modules node_modules/.bin/jest --testPathPatterns='__tests__/integration'",
+    "test:integration": "node --experimental-vm-modules node_modules/.bin/jest --runInBand --testPathPatterns='__tests__/integration'",
     "test:watch": "node --experimental-vm-modules node_modules/.bin/jest --watch",
     "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --runInBand --coverage",
     "start": "node dist/index.js",
