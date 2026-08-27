@@ -106,6 +106,7 @@ describe("GET /deck", () => {
     const res = await request(app).get(`/deck?userId=${otherUser.id}`);
 
     expect(res.status).toBe(200);
+    DeckListResponse.parse(res.body);
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0].name).toBe("Public Deck");
     expect(res.body.data[0].isPublic).toBe(true);
@@ -174,6 +175,7 @@ describe("GET /deck/:id", () => {
     const deck = await createTestDeck(owner.id, { isPublic: true });
     const res = await request(app).get(`/deck/${deck.id}`);
     expect(res.status).toBe(200);
+    DeckResponse.parse(res.body);
     expect(res.body.data.id).toBe(deck.id);
   });
 

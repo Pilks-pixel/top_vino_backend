@@ -126,6 +126,7 @@ describe("POST /deck/:deckId/cards", () => {
       .send(basicCard);
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
+    CardResponse.parse(res.body);
     expect(res.body.data.question).toBe(basicCard.question);
     expect(res.body.data.deckId).toBe(deck.id);
   });
@@ -148,6 +149,7 @@ describe("GET /deck/:deckId/cards", () => {
     const deck = await createTestDeck(testUser.id);
     const res = await request(app).get(`/deck/${deck.id}/cards`);
     expect(res.status).toBe(200);
+    CardListResponse.parse(res.body);
     expect(res.body.data).toEqual([]);
   });
 
@@ -195,6 +197,7 @@ describe("GET /deck/:deckId/cards", () => {
     await createTestCard(deck.id, { question: "Public question" });
     const res = await request(app).get(`/deck/${deck.id}/cards`);
     expect(res.status).toBe(200);
+    CardListResponse.parse(res.body);
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0].question).toBe("Public question");
   });
@@ -320,6 +323,7 @@ describe("PUT /deck/:deckId/cards/:id", () => {
       .put(`/deck/${deck.id}/cards/${card.id}`)
       .send({ question: "Updated by editor" });
     expect(res.status).toBe(200);
+    CardResponse.parse(res.body);
     expect(res.body.data.question).toBe("Updated by editor");
   });
 });
@@ -372,6 +376,7 @@ describe("DELETE /deck/:deckId/cards/:id", () => {
     await createTestDeckCollaborator(deck.id, testUser.id, "EDITOR");
     const res = await request(app).delete(`/deck/${deck.id}/cards/${card.id}`);
     expect(res.status).toBe(200);
+    CardDeleteResponse.parse(res.body);
     expect(res.body.message).toBe("Card deleted successfully");
   });
 });

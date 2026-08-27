@@ -117,6 +117,7 @@ describe("POST /review", () => {
       .post("/review")
       .send({ cardId: card.id, quality: 4 });
     expect(res.status).toBe(201);
+    ReviewSubmitResponse.parse(res.body);
     expect(res.body.data.review).toBeDefined();
   });
 });
@@ -183,6 +184,7 @@ describe("GET /review/due", () => {
     await createTestProgress(testUser.id, card.id, { nextReviewAt: yesterday });
     const res = await request(app).get("/review/due");
     expect(res.status).toBe(200);
+    DueCardsResponse.parse(res.body);
     expect(res.body.data).toHaveLength(0);
   });
 
