@@ -34,6 +34,13 @@ The generated OpenAPI 3.1 document is served as JSON at `GET /openapi.json`.
 Its component schemas are generated from the same registered Zod schemas used
 by request validation and response contracts.
 
+When `NODE_ENV=development`, a browsable Scalar reference is available at
+`GET /docs`. Its interactive console includes browser cookies, so endpoints
+that use the current Better Auth session can be tried against the local server.
+The reference UI is not mounted in production. Whether a deployment should
+serve it behind configuration or an environment flag is deferred to the Phase
+6 deployment setup, where that decision should be recorded.
+
 ## 📋 Current Status
 
 **Phases 1–5 complete. Deck Access refactor delivered. 224 tests passing.**

@@ -5,6 +5,7 @@ import cors from "cors";
 import { pinoHttp } from "pino-http";
 import helmet from "helmet";
 import { toNodeHandler } from "better-auth/node";
+import { apiReference } from "@scalar/express-api-reference";
 
 import { auth } from "./lib/auth.ts";
 import { logger, serializeRequest, serializeResponse } from "./lib/logger.ts";
@@ -76,6 +77,17 @@ export function createApp(applicationLogger = logger) {
       },
     }),
   );
+  if (process.env.NODE_ENV === "development") {
+    app.get(
+      "/docs",
+      apiReference({
+        pageTitle: "Top Vino API Reference",
+        url: "/openapi.json",
+        customFetch: (input, init) =>
+          window.fetch(input, { ...init, credentials: "include" }),
+      }),
+    );
+  }
   app.use(helmet());
   app.use(
     cors({
