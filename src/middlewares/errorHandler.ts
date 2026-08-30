@@ -28,6 +28,8 @@ const treeifiedErrorShape: z.ZodType<TreeifiedErrorNode> = z.lazy(() =>
   }),
 );
 
+z.globalRegistry.add(treeifiedErrorShape, { id: "ValidationErrorDetails" });
+
 type TreeifiedErrorNode = {
   errors: string[];
   properties?: Record<string, TreeifiedErrorNode>;
@@ -38,21 +40,23 @@ type TreeifiedErrorNode = {
  * Canonical error envelope schema. Every documented error response in the API
  * conforms to this shape; later tickets' error responses inherit it.
  */
-export const errorResponseSchema = z.object({
-  success: z.literal(false).describe("Always false for error responses"),
-  status: z.literal("error").describe("Discriminator for error responses"),
-  statusCode: z.number().int().describe("HTTP status code"),
-  message: z.string().describe("Human-readable error message"),
-  details: treeifiedErrorShape
-    .optional()
-    .describe(
-      "Treeified validation error details, present only on validation failures",
-    ),
-  stack: z
-    .string()
-    .optional()
-    .describe("Stack trace, development environments only"),
-});
+export const errorResponseSchema = z
+  .object({
+    success: z.literal(false).describe("Always false for error responses"),
+    status: z.literal("error").describe("Discriminator for error responses"),
+    statusCode: z.number().int().describe("HTTP status code"),
+    message: z.string().describe("Human-readable error message"),
+    details: treeifiedErrorShape
+      .optional()
+      .describe(
+        "Treeified validation error details, present only on validation failures",
+      ),
+    stack: z
+      .string()
+      .optional()
+      .describe("Stack trace, development environments only"),
+  })
+  .meta({ id: "ErrorResponse" });
 
 export type ErrorResponse = z.infer<typeof errorResponseSchema>;
 

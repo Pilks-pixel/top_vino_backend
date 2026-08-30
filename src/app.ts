@@ -15,6 +15,7 @@ import cardRouter from "./routes/card/card.router.ts";
 import reviewRouter from "./routes/review/review.router.ts";
 import { createErrorHandler } from "./middlewares/errorHandler.ts";
 import { authLimiter, generalLimiter } from "./config/rateLimits.ts";
+import { openApiDocument } from "./openapi.ts";
 
 const REQUEST_ID_HEADER = "x-request-id";
 const MAX_REQUEST_ID_LENGTH = 128;
@@ -107,6 +108,10 @@ export function createApp(applicationLogger = logger) {
   app.all("/api/auth/{*any}", toNodeHandler(auth));
   app.use(express.json({ limit: "10kb" }));
   app.use(generalLimiter);
+
+  app.get("/openapi.json", (_req, res) => {
+    res.json(openApiDocument);
+  });
 
   app.get("/", async (_req, res) => {
     res.send("Hello World!");

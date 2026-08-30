@@ -20,10 +20,12 @@ export const ProgressUpsertSchema = z.object({
 });
 
 // used for validating review submission input, not the actual review record
-export const SubmitReviewSchema = z.object({
-  cardId: z.string().min(1, "cardId is required"),
-  quality: z.number().int().min(0).max(5),
-});
+export const SubmitReviewSchema = z
+  .object({
+    cardId: z.string().min(1, "cardId is required"),
+    quality: z.number().int().min(0).max(5),
+  })
+  .meta({ id: "SubmitReview" });
 
 export type ReviewCreateInput = z.infer<typeof ReviewCreateSchema>;
 export type ProgressUpsertInput = z.infer<typeof ProgressUpsertSchema>;

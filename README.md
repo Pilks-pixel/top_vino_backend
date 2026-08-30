@@ -28,9 +28,15 @@ npm test
 
 Copy `.env.example` to `.env` and fill in the required values before starting.
 
+## API contract
+
+The generated OpenAPI 3.1 document is served as JSON at `GET /openapi.json`.
+Its component schemas are generated from the same registered Zod schemas used
+by request validation and response contracts.
+
 ## 📋 Current Status
 
-**Phases 1–5 complete. Deck Access refactor delivered. 206 tests passing.**
+**Phases 1–5 complete. Deck Access refactor delivered. 224 tests passing.**
 
 ### Completed ✅
 
@@ -43,11 +49,11 @@ Copy `.env.example` to `.env` and fill in the required values before starting.
 - Structured logging via pino with redaction and request correlation (`/health` and `/ready` endpoints included)
 - Graceful shutdown on SIGTERM/SIGINT
 - Jest + Supertest harness against a dedicated test database; coverage runs reliably green
+- Generated OpenAPI 3.1 contract at `/openapi.json`, with route-completeness and standards validation in CI
 - Minimal CI workflow: lint + typecheck + tests on every PR
 
 ### Next Up 📌
 
-- API contract documentation (OpenAPI or equivalent) ahead of frontend work
 - Frontend application
 
 ## 🗺️ Roadmap — Phase 6: Deployment (not started)
