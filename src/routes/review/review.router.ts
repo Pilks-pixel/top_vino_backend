@@ -11,16 +11,16 @@ import { CardIdParamsSchema } from "../../utils/paramsSchema.ts";
 
 const reviewRouter = express.Router();
 
+reviewRouter.use(authMiddleware);
+
 reviewRouter.post(
   "/",
-  authMiddleware,
   validationMiddleware(SubmitReviewSchema),
   httpSubmitReview,
 );
-reviewRouter.get("/due", authMiddleware, httpGetDueCards);
+reviewRouter.get("/due", httpGetDueCards);
 reviewRouter.get(
   "/progress/:cardId",
-  authMiddleware,
   validationMiddleware(CardIdParamsSchema, "params"),
   httpGetProgress,
 );

@@ -1,12 +1,22 @@
 import * as z from "zod/v4";
 import { UserProfile } from "./userSchema.ts";
 
+/**
+ * Creates a success response envelope for the given data schema.
+ * @template T - The Zod schema type for the response data.
+ * @param data - The Zod schema representing the response data.
+ * @returns A Zod schema for the success response envelope.
+ */
 export const SuccessEnvelope = <T extends z.ZodType>(data: T) =>
   z.strictObject({
     success: z.literal(true).describe("Always true for success responses"),
     data,
   });
 
+/**
+ * Creates a success response envelope for a message.
+ * @returns A Zod schema for the success message response.
+ */
 export const SuccessMessageResponse = z.strictObject({
   success: z.literal(true).describe("Always true for success responses"),
   message: z.string(),

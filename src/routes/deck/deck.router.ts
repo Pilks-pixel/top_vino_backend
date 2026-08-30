@@ -17,34 +17,27 @@ import { IdParamsSchema } from "../../utils/paramsSchema.ts";
 
 const deckRouter = express.Router();
 
+deckRouter.use(authMiddleware);
+
 deckRouter.get(
   "/",
-  authMiddleware,
   validationMiddleware(ListDecksQuerySchema, "query"),
   httpListDecks,
 );
 deckRouter.get(
   "/:id",
-  authMiddleware,
   validationMiddleware(IdParamsSchema, "params"),
   httpGetDeck,
 );
-deckRouter.post(
-  "/",
-  authMiddleware,
-  validationMiddleware(CreateDeckSchema),
-  httpCreateDeck,
-);
+deckRouter.post("/", validationMiddleware(CreateDeckSchema), httpCreateDeck);
 deckRouter.put(
   "/:id",
-  authMiddleware,
   validationMiddleware(IdParamsSchema, "params"),
   validationMiddleware(UpdateDeckSchema),
   httpUpdateDeck,
 );
 deckRouter.delete(
   "/:id",
-  authMiddleware,
   validationMiddleware(IdParamsSchema, "params"),
   httpDeleteDeck,
 );
