@@ -215,6 +215,57 @@ describe("OpenAPI document", () => {
     );
   });
 
+  describe("Better Auth generated contract", () => {
+    it("serves Better Auth's valid generated OpenAPI document", async () => {
+      const response = await request(app).get(
+        "/api/auth/open-api/generate-schema",
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.type).toBe("application/json");
+      expect(response.body.openapi).toBe("3.1.1");
+
+      const validator = new Validator();
+      const result = await validator.validate(response.body);
+      expect(result).toEqual({ valid: true });
+    });
+
+    it("documents Top Vino's enabled authentication flows", async () => {
+      const response = await request(app).get(
+        "/api/auth/open-api/generate-schema",
+      );
+      const paths = response.body.paths;
+
+      expect(paths["/sign-up/email"].post).toBeDefined();
+      expect(paths["/sign-in/email"].post).toBeDefined();
+      expect(paths["/get-session"].get).toBeDefined();
+      expect(paths["/sign-out"].post).toBeDefined();
+      expect(paths["/sign-in/social"].post).toBeDefined();
+    });
+
+    it("documents google as an allowed social sign-in provider", async () => {
+      const response = await request(app).get(
+        "/api/auth/open-api/generate-schema",
+      );
+      const provider =
+        response.body.paths["/sign-in/social"].post.requestBody.content[
+          "application/json"
+        ].schema.properties.provider;
+
+      expect(provider.anyOf).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ enum: expect.arrayContaining(["google"]) }),
+        ]),
+      );
+    });
+
+    it("does not mount Better Auth's default reference", async () => {
+      const response = await request(app).get("/api/auth/reference");
+
+      expect(response.status).toBe(404);
+    });
+  });
+
   it("documents Better Auth as a managed surface instead of duplicating it", async () => {
     const response = await request(app).get("/openapi.json");
 

@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { customSession } from "better-auth/plugins";
+import { customSession, openAPI } from "better-auth/plugins";
 import prisma from "./prisma.ts";
 
 type BetterAuthResponseContext = {
@@ -54,6 +54,7 @@ export const auth = betterAuth({
     },
   },
   plugins: [
+    openAPI({ disableDefaultReference: true }),
     customSession(async ({ user, session }) => {
       const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
       if (!dbUser)
