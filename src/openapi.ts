@@ -34,11 +34,7 @@ type OperationObject = {
   };
   responses: Record<string, ResponseObject>;
 };
-type PathItemObject = Partial<Record<HttpMethod, OperationObject>> & {
-  description?: string;
-  parameters?: ParameterObject[];
-  "x-managed-by"?: string;
-};
+type PathItemObject = Partial<Record<HttpMethod, OperationObject>>;
 
 type RouteMetadata = {
   method: HttpMethod;
@@ -442,20 +438,6 @@ function buildPaths(): Record<string, PathItemObject> {
     paths[route.path] = pathItem;
   }
 
-  paths["/api/auth/{path}"] = {
-    description:
-      "This authentication surface is managed by Better Auth; use Better Auth's generated contract for its operations.",
-    parameters: [
-      {
-        name: "path",
-        in: "path",
-        required: true,
-        schema: { type: "string" },
-      },
-    ],
-    "x-managed-by": "Better Auth",
-  };
-
   return paths;
 }
 
@@ -472,7 +454,7 @@ export function generateOpenApiDocument(): OpenApiDocument {
       title: "Top Vino API",
       version: "1.0.0",
       description:
-        "API for building decks, studying cards, and tracking spaced-repetition progress.",
+        "API for building decks, studying cards, and tracking spaced-repetition progress. Requests sent through the interactive API reference are real and persist in the configured development database.",
     },
     paths: buildPaths(),
     components: {

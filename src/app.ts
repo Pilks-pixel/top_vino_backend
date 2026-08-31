@@ -82,7 +82,20 @@ export function createApp(applicationLogger = logger) {
       "/docs",
       apiReference({
         pageTitle: "Top Vino API Reference",
-        url: "/openapi.json",
+        sources: [
+          {
+            title: "Top Vino API",
+            slug: "top-vino",
+            url: "/openapi.json",
+            default: true,
+          },
+          {
+            title: "Authentication",
+            slug: "authentication",
+            url: "/api/auth/open-api/generate-schema",
+          },
+        ],
+        persistAuth: false,
         customFetch: (input, init) =>
           window.fetch(input, { ...init, credentials: "include" }),
       }),

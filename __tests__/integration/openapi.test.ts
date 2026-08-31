@@ -266,17 +266,20 @@ describe("OpenAPI document", () => {
     });
   });
 
-  it("documents Better Auth as a managed surface instead of duplicating it", async () => {
+  it("keeps the Top Vino contract independent of Better Auth", async () => {
     const response = await request(app).get("/openapi.json");
 
-    expect(response.body.paths["/api/auth/{path}"]).toMatchObject({
-      description: expect.stringContaining("managed by Better Auth"),
-      "x-managed-by": "Better Auth",
-    });
-    for (const method of operationMethods) {
-      expect(response.body.paths["/api/auth/{path}"]).not.toHaveProperty(
-        method,
-      );
-    }
+    const authPaths = Object.keys(response.body.paths).filter(path =>
+      path.startsWith("/api/auth/"),
+    );
+
+    expect(authPaths).toEqual([]);
+  });
+
+  it("warns that interactive requests persist", async () => {
+    const response = await request(app).get("/openapi.json");
+
+    expect(response.body.info.description).toMatch(/real/i);
+    expect(response.body.info.description).toMatch(/persist/i);
   });
 });
