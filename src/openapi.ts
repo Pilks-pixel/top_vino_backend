@@ -364,7 +364,7 @@ const routes: RouteMetadata[] = [
     path: "/review",
     operationId: "submitReview",
     summary: "Submit a card review",
-    tag: "Study",
+    tag: "Reviews",
     successStatus: 201,
     successDescription: "Review recorded and progress updated",
     responseSchema: "ReviewSubmitResponse",

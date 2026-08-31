@@ -15,16 +15,16 @@ import { IdParamsSchema } from "../../utils/paramsSchema.ts";
 
 const userRouter = express.Router();
 
-userRouter.use(authMiddleware);
-
-userRouter.get("/me", httpGetCurrentUser);
+userRouter.get("/me", authMiddleware, httpGetCurrentUser);
 userRouter.get(
   "/:id",
+  authMiddleware,
   validationMiddleware(IdParamsSchema, "params"),
   httpGetUserByID,
 );
 userRouter.put(
   "/:id",
+  authMiddleware,
   validationMiddleware(IdParamsSchema, "params"),
   requireOwnership(req => req.params.id),
   validationMiddleware(UserUpdate),
@@ -32,6 +32,7 @@ userRouter.put(
 );
 userRouter.delete(
   "/:id",
+  authMiddleware,
   validationMiddleware(IdParamsSchema, "params"),
   requireOwnership(req => req.params.id),
   httpDeleteUser,
