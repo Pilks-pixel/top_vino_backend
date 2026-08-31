@@ -15,6 +15,7 @@
     "dev": "node --watch --experimental-strip-types src/server.ts",
     "db:reset:dev": "node --experimental-strip-types src/scripts/resetDevelopmentDatabase.ts",
     "docs:reset": "npm run db:reset:dev",
+    "docs:seed": "node --experimental-strip-types src/scripts/seedDocsData.ts",
     "check-types": "tsc --noEmit",
     "format": "prettier --write \"**/*.+(.js|ts|json)\"",
     "lint": "eslint .",

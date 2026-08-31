@@ -11,9 +11,14 @@ const {
   createTestProgress,
   createTestDeckCollaborator,
 } = await import("../setup/factories.js");
-const { resetDevelopmentDatabase, DEVELOPMENT_DATA_TABLES } = await import(
-  "../../src/lib/developmentData.ts"
-);
+const {
+  resetDevelopmentDatabase,
+  seedDocsData,
+  DEVELOPMENT_DATA_TABLES,
+  DOCS_SEED_FIXTURE,
+} = await import("../../src/lib/developmentData.ts");
+const { auth } = await import("../../src/lib/auth.ts");
+const { disconnectPrisma } = await import("../../src/lib/prisma.ts");
 
 const commandEnv = {
   NODE_ENV: "development",
@@ -21,9 +26,15 @@ const commandEnv = {
   DATABASE_URL: process.env.DATABASE_URL,
 };
 
+const seedOptions = { env: commandEnv, prisma: testPrisma, auth };
+
 beforeEach(async () => cleanDb());
 afterEach(async () => cleanDb());
-afterAll(async () => disconnectDb());
+afterAll(async () => {
+  await disconnectDb();
+  // auth.ts uses the app Prisma client, which also holds test-database connections
+  await disconnectPrisma();
+});
 
 describe("resetDevelopmentDatabase (integration)", () => {
   it("targets only the test database", () => {
@@ -103,5 +114,254 @@ describe("resetDevelopmentDatabase (integration)", () => {
     const user = await createTestUser();
     expect(await testPrisma.user.count()).toBe(1);
     expect(user.id).toBeTruthy();
+  });
+});
+
+describe("seedDocsData (integration)", () => {
+  it("first seed creates a sign-in-ready FREE fixture user with the canonical private deck and three representative cards", async () => {
+    expect(process.env.DATABASE_URL).toContain("top_vino_test");
+
+    const result = await seedDocsData(seedOptions);
+
+    expect(result).toEqual({
+      userCreated: true,
+      deckCreated: true,
+      cardsCreated: 3,
+      cardsExisting: 0,
+    });
+
+    const user = await testPrisma.user.findUnique({
+      where: { email: DOCS_SEED_FIXTURE.user.email },
+    });
+    expect(user).not.toBeNull();
+    expect(user!.subscriptionType).toBe("FREE");
+
+    // the documented credentials must authenticate through real Better Auth
+    const signIn = await auth.api.signInEmail({
+      body: {
+        email: DOCS_SEED_FIXTURE.user.email,
+        password: DOCS_SEED_FIXTURE.user.password,
+      },
+    });
+    expect(signIn).toBeTruthy();
+
+    const deck = await testPrisma.deck.findUnique({
+      where: { id: DOCS_SEED_FIXTURE.deck.id },
+      include: { cards: true },
+    });
+    expect(deck).not.toBeNull();
+    expect(deck!.userId).toBe(user!.id);
+    expect(deck!.name).toBe(DOCS_SEED_FIXTURE.deck.name);
+    expect(deck!.isPublic).toBe(false);
+    expect(deck!.cards).toHaveLength(3);
+
+    const cardsById = new Map(deck!.cards.map(card => [card.id, card]));
+    const [basic, multipleChoice, openEnded] = DOCS_SEED_FIXTURE.cards;
+
+    const basicCard = cardsById.get(basic.id);
+    expect(basicCard?.type).toBe("basic");
+    expect(basicCard?.correctAnswer).toBe(basic.correctAnswer);
+
+    const mcCard = cardsById.get(multipleChoice.id);
+    expect(mcCard?.type).toBe("multiple_choice");
+    expect(mcCard?.correctAnswer).toBe(multipleChoice.correctAnswer);
+    expect(mcCard?.incorrectAnswers.length).toBeGreaterThanOrEqual(3);
+    expect(mcCard?.incorrectAnswers).not.toContain(mcCard?.correctAnswer);
+
+    const openCard = cardsById.get(openEnded.id);
+    expect(openCard?.type).toBe("open_ended");
+    expect(openCard?.referenceAnswer).toBe(openEnded.referenceAnswer);
+  });
+
+  it("second seed verifies the documented credentials and creates no duplicates or leftover sessions", async () => {
+    expect(process.env.DATABASE_URL).toContain("top_vino_test");
+    await seedDocsData(seedOptions);
+
+    // one credential account, and every session minted during seeding is gone
+    expect(await testPrisma.account.count()).toBe(1);
+    expect(await testPrisma.session.count()).toBe(0);
+
+    const result = await seedDocsData(seedOptions);
+
+    expect(result).toEqual({
+      userCreated: false,
+      deckCreated: false,
+      cardsCreated: 0,
+      cardsExisting: 3,
+    });
+    expect(await testPrisma.user.count()).toBe(1);
+    expect(await testPrisma.account.count()).toBe(1);
+    expect(await testPrisma.session.count()).toBe(0);
+    expect(await testPrisma.deck.count()).toBe(1);
+    expect(await testPrisma.card.count()).toBe(3);
+  });
+
+  it("preserves developer edits to existing canonical records on repeat seeding", async () => {
+    expect(process.env.DATABASE_URL).toContain("top_vino_test");
+    await seedDocsData(seedOptions);
+
+    await testPrisma.deck.update({
+      where: { id: DOCS_SEED_FIXTURE.deck.id },
+      data: { name: "My Renamed Deck", topic: "developer experiments" },
+    });
+    const [basic] = DOCS_SEED_FIXTURE.cards;
+    await testPrisma.card.update({
+      where: { id: basic.id },
+      data: { question: "Edited question", correctAnswer: "Edited answer" },
+    });
+
+    const result = await seedDocsData(seedOptions);
+
+    expect(result).toEqual({
+      userCreated: false,
+      deckCreated: false,
+      cardsCreated: 0,
+      cardsExisting: 3,
+    });
+    const deck = await testPrisma.deck.findUnique({
+      where: { id: DOCS_SEED_FIXTURE.deck.id },
+    });
+    expect(deck?.name).toBe("My Renamed Deck");
+    expect(deck?.topic).toBe("developer experiments");
+    const card = await testPrisma.card.findUnique({ where: { id: basic.id } });
+    expect(card?.question).toBe("Edited question");
+    expect(card?.correctAnswer).toBe("Edited answer");
+  });
+
+  it("recreates a missing canonical card with its initial values", async () => {
+    expect(process.env.DATABASE_URL).toContain("top_vino_test");
+    await seedDocsData(seedOptions);
+    const [, multipleChoice] = DOCS_SEED_FIXTURE.cards;
+    await testPrisma.card.delete({ where: { id: multipleChoice.id } });
+
+    const result = await seedDocsData(seedOptions);
+
+    expect(result).toEqual({
+      userCreated: false,
+      deckCreated: false,
+      cardsCreated: 1,
+      cardsExisting: 2,
+    });
+    const recreated = await testPrisma.card.findUnique({
+      where: { id: multipleChoice.id },
+    });
+    expect(recreated?.type).toBe("multiple_choice");
+    expect(recreated?.question).toBe(multipleChoice.question);
+    expect(recreated?.correctAnswer).toBe(multipleChoice.correctAnswer);
+    expect(recreated?.incorrectAnswers).toEqual([
+      ...multipleChoice.incorrectAnswers,
+    ]);
+    expect(await testPrisma.card.count()).toBe(3);
+  });
+
+  it("recreates a missing canonical deck together with its absent cards", async () => {
+    expect(process.env.DATABASE_URL).toContain("top_vino_test");
+    await seedDocsData(seedOptions);
+    // delete dependent canonical cards first: Card.deckId has no cascade
+    await testPrisma.card.deleteMany({
+      where: { deckId: DOCS_SEED_FIXTURE.deck.id },
+    });
+    await testPrisma.deck.delete({ where: { id: DOCS_SEED_FIXTURE.deck.id } });
+
+    const result = await seedDocsData(seedOptions);
+
+    expect(result).toEqual({
+      userCreated: false,
+      deckCreated: true,
+      cardsCreated: 3,
+      cardsExisting: 0,
+    });
+    const deck = await testPrisma.deck.findUnique({
+      where: { id: DOCS_SEED_FIXTURE.deck.id },
+      include: { cards: true },
+    });
+    const user = await testPrisma.user.findUnique({
+      where: { email: DOCS_SEED_FIXTURE.user.email },
+    });
+    expect(deck?.userId).toBe(user?.id);
+    expect(deck?.name).toBe(DOCS_SEED_FIXTURE.deck.name);
+    expect(deck?.cards).toHaveLength(3);
+  });
+
+  it("fails with recovery instructions when the fixture email exists with different credentials and never mutates fixture data", async () => {
+    expect(process.env.DATABASE_URL).toContain("top_vino_test");
+    // the fixture email was already registered with a different password
+    await auth.api.signUpEmail({
+      body: {
+        name: "Earlier Docs User",
+        email: DOCS_SEED_FIXTURE.user.email,
+        password: "DifferentPassword1!",
+      },
+    });
+    const decksBefore = await testPrisma.deck.count();
+    const cardsBefore = await testPrisma.card.count();
+
+    await expect(seedDocsData(seedOptions)).rejects.toThrow(
+      /npm run docs:reset[\s\S]*npm run docs:seed/,
+    );
+
+    // no application fixture data was created or changed
+    expect(await testPrisma.deck.count()).toBe(decksBefore);
+    expect(await testPrisma.card.count()).toBe(cardsBefore);
+    // the unknown password was not reset to the documented one
+    await expect(
+      auth.api.signInEmail({
+        body: {
+          email: DOCS_SEED_FIXTURE.user.email,
+          password: "DifferentPassword1!",
+        },
+      }),
+    ).resolves.toBeTruthy();
+  });
+
+  it("fails rather than claiming the canonical deck ID owned by another user", async () => {
+    expect(process.env.DATABASE_URL).toContain("top_vino_test");
+    const otherUser = await createTestUser();
+    await testPrisma.deck.create({
+      data: {
+        id: DOCS_SEED_FIXTURE.deck.id,
+        userId: otherUser.id,
+        name: "Someone Else's Deck",
+      },
+    });
+
+    await expect(seedDocsData(seedOptions)).rejects.toThrow(
+      /belongs to another user/,
+    );
+
+    const deck = await testPrisma.deck.findUnique({
+      where: { id: DOCS_SEED_FIXTURE.deck.id },
+    });
+    expect(deck?.name).toBe("Someone Else's Deck");
+    expect(deck?.userId).toBe(otherUser.id);
+    expect(await testPrisma.card.count()).toBe(0);
+  });
+
+  it("fails rather than claiming a canonical card ID owned by another deck", async () => {
+    expect(process.env.DATABASE_URL).toContain("top_vino_test");
+    await seedDocsData(seedOptions);
+    const [basic] = DOCS_SEED_FIXTURE.cards;
+    await testPrisma.card.delete({ where: { id: basic.id } });
+    const otherUser = await createTestUser();
+    const otherDeck = await createTestDeck(otherUser.id);
+    await testPrisma.card.create({
+      data: {
+        id: basic.id,
+        deckId: otherDeck.id,
+        type: "basic",
+        question: "Someone else's question",
+        incorrectAnswers: [],
+      },
+    });
+
+    await expect(seedDocsData(seedOptions)).rejects.toThrow(
+      /belongs to another deck/,
+    );
+
+    const card = await testPrisma.card.findUnique({ where: { id: basic.id } });
+    expect(card?.deckId).toBe(otherDeck.id);
+    expect(card?.question).toBe("Someone else's question");
+    // the failed seed's sign-in session was cleaned up on the way out
+    expect(await testPrisma.session.count()).toBe(0);
   });
 });
