@@ -37,9 +37,11 @@ by request validation and response contracts.
 When `NODE_ENV=development`, a browsable Scalar reference is available at
 `GET /docs`. Its interactive console includes browser cookies, so endpoints
 that use the current Better Auth session can be tried against the local server.
-The reference UI is not mounted in production. Whether a deployment should
-serve it behind configuration or an environment flag is deferred to the Phase
-6 deployment setup, where that decision should be recorded.
+The reference UI is not mounted in production.
+
+See [docs/api-reference.md](./docs/api-reference.md) for the full developer
+workflow: the two Scalar sources, the seed fixture and credentials, the guarded
+reset commands, and the manual sign-in walkthrough.
 
 ## 📋 Current Status
 
