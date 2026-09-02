@@ -3,30 +3,6 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { customSession, openAPI } from "better-auth/plugins";
 import prisma from "./prisma.ts";
 
-type BetterAuthResponseContext = {
-  context: {
-    returned?: Response;
-  };
-};
-
-function resolveAuthStatusCode(error: {
-  statusCode?: unknown;
-  status?: unknown;
-}): number {
-  for (const candidate of [error.statusCode, error.status]) {
-    if (
-      typeof candidate === "number" &&
-      Number.isInteger(candidate) &&
-      candidate >= 400 &&
-      candidate <= 599
-    ) {
-      return candidate;
-    }
-  }
-
-  return 500;
-}
-
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
@@ -65,32 +41,4 @@ export const auth = betterAuth({
       };
     }),
   ],
-  onAPIError: {
-    onError: (error, ctx) => {
-      const apiError = error as {
-        message?: unknown;
-        statusCode?: unknown;
-        status?: unknown;
-      };
-      const statusCode = resolveAuthStatusCode(apiError);
-      const message =
-        typeof apiError.message === "string"
-          ? apiError.message
-          : "Authentication failed";
-      const authCtx = ctx as unknown as BetterAuthResponseContext;
-
-      authCtx.context.returned = new Response(
-        JSON.stringify({
-          success: false,
-          status: "error",
-          statusCode,
-          message,
-        }),
-        {
-          status: statusCode,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
-    },
-  },
 });
