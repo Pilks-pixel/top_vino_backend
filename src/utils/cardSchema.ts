@@ -17,14 +17,53 @@ export const CreateCardSchema = z
 
 export const UpdateCardSchema = z
   .object({
-    type: CardType.optional(),
-    question: z.string().min(1).optional(),
-    correctAnswer: z.string().nullable().optional(),
-    incorrectAnswers: z.array(z.string()).optional(),
-    referenceAnswer: z.string().nullable().optional(),
-    topic: z.string().nullable().optional(),
-    subtopic: z.string().nullable().optional(),
-    sourceType: z.string().nullable().optional(),
+    type: CardType.optional().describe(
+      "Omit to leave the card type unchanged.",
+    ),
+    question: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("Omit to leave unchanged. Cannot be sent as an empty string."),
+    correctAnswer: z
+      .string()
+      .nullable()
+      .optional()
+      .describe(
+        "Omit to leave unchanged. Send null or an empty string to clear it.",
+      ),
+    incorrectAnswers: z
+      .array(z.string())
+      .optional()
+      .describe("Omit to leave unchanged. Replaces the entire list when sent."),
+    referenceAnswer: z
+      .string()
+      .nullable()
+      .optional()
+      .describe(
+        "Omit to leave unchanged. Send null or an empty string to clear it.",
+      ),
+    topic: z
+      .string()
+      .nullable()
+      .optional()
+      .describe(
+        "Omit to leave unchanged. Send null or an empty string to clear it.",
+      ),
+    subtopic: z
+      .string()
+      .nullable()
+      .optional()
+      .describe(
+        "Omit to leave unchanged. Send null or an empty string to clear it.",
+      ),
+    sourceType: z
+      .string()
+      .nullable()
+      .optional()
+      .describe(
+        "Omit to leave unchanged. Send null or an empty string to clear it.",
+      ),
   })
   .meta({ id: "UpdateCard" });
 

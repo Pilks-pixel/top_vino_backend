@@ -10,9 +10,21 @@ export const CreateDeckSchema = z
 
 export const UpdateDeckSchema = z
   .strictObject({
-    name: z.string().min(1).max(200).optional(),
-    topic: z.string().max(200).nullable().optional(),
-    isPublic: z.boolean().optional(),
+    name: z
+      .string()
+      .min(1)
+      .max(200)
+      .optional()
+      .describe("Omit to leave unchanged. Cannot be sent as an empty string."),
+    topic: z
+      .string()
+      .max(200)
+      .nullable()
+      .optional()
+      .describe(
+        "Omit to leave unchanged. Send null or an empty string to clear it.",
+      ),
+    isPublic: z.boolean().optional().describe("Omit to leave unchanged."),
   })
   .meta({ id: "UpdateDeck" });
 
