@@ -82,7 +82,7 @@ export async function resetDevelopmentDatabase(
 }
 
 // ponytail: `as const` is sufficient immutability for this module-local
-// fixture; IDs are namespaced to stay collision-resistant
+// fixture; fixed UUIDs keep the fixture deterministic and API-compatible
 export const DOCS_SEED_FIXTURE = {
   user: {
     name: "Scalar Docs User",
@@ -90,14 +90,14 @@ export const DOCS_SEED_FIXTURE = {
     password: "TopVinoDocs1!",
   },
   deck: {
-    id: "docs-seed-deck-wine-fundamentals",
+    id: "7f8f6f1a-5db0-4b7e-9c0e-3f3b9d2c4a11",
     name: "Wine Fundamentals",
     topic: "wine",
     isPublic: false,
   },
   cards: [
     {
-      id: "docs-seed-card-tannin-basics",
+      id: "b1a2c3d4-5e6f-4789-a012-3456789abcde",
       type: "basic",
       question: "What are tannins in wine?",
       correctAnswer:
@@ -105,14 +105,14 @@ export const DOCS_SEED_FIXTURE = {
       incorrectAnswers: [],
     },
     {
-      id: "docs-seed-card-barolo-nebbiolo",
+      id: "c2b3d4e5-6f70-489a-b123-456789abcdef",
       type: "multiple_choice",
       question: "Which grape variety is used to make Barolo?",
       correctAnswer: "Nebbiolo",
       incorrectAnswers: ["Sangiovese", "Barbera", "Dolcetto"],
     },
     {
-      id: "docs-seed-card-malolactic-fermentation",
+      id: "d3c4e5f6-7081-49ab-a234-56789abcdef0",
       type: "open_ended",
       question: "Describe how malolactic fermentation changes a wine.",
       referenceAnswer:

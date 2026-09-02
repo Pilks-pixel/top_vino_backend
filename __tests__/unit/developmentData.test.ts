@@ -9,6 +9,13 @@ import {
   type DocsSeedPrismaClient,
   type DocsSeedTransactionClient,
 } from "../../src/lib/developmentData.ts";
+import { CreateCardSchema } from "../../src/utils/cardSchema.ts";
+import { CreateDeckSchema } from "../../src/utils/deckSchema.ts";
+import {
+  CardIdParamsSchema,
+  DeckIdParamsSchema,
+  IdParamsSchema,
+} from "../../src/utils/paramsSchema.ts";
 
 const safeEnv = {
   NODE_ENV: "development",
@@ -185,6 +192,23 @@ describe("DEVELOPMENT_DATA_TABLES", () => {
     const sql = client.$executeRawUnsafe.mock.calls[0][0] as string;
     expect(sql).not.toContain("evil");
     expect(sql).toContain('"account"');
+  });
+});
+
+describe("DOCS_SEED_FIXTURE validation compatibility", () => {
+  it("uses payloads and identifiers accepted by the public schemas", () => {
+    const { id: deckId, ...deckInput } = DOCS_SEED_FIXTURE.deck;
+
+    expect(() => CreateDeckSchema.parse(deckInput)).not.toThrow();
+    expect(() => IdParamsSchema.parse({ id: deckId })).not.toThrow();
+    expect(() => DeckIdParamsSchema.parse({ deckId })).not.toThrow();
+
+    for (const card of DOCS_SEED_FIXTURE.cards) {
+      const { id: cardId, ...cardInput } = card;
+
+      expect(() => CreateCardSchema.parse(cardInput)).not.toThrow();
+      expect(() => CardIdParamsSchema.parse({ cardId })).not.toThrow();
+    }
   });
 });
 
