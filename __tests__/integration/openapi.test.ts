@@ -116,7 +116,6 @@ describe("OpenAPI document", () => {
         "SubmitReview",
         "UserUpdate",
         "IdParams",
-        "UserIdParams",
         "DeckIdParams",
         "CardIdParams",
         "DeckCardParams",

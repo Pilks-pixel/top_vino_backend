@@ -71,11 +71,17 @@ describe("GET /user/:id", () => {
     expect(res.body.statusCode).toBe(404);
   });
 
-  it("accepts opaque Better Auth user IDs", async () => {
+  it("returns 400 with the validation envelope when id is not a UUID", async () => {
     const res = await request(app).get("/user/not-a-uuid");
 
-    expect(res.status).toBe(404);
-    expect(res.body.statusCode).toBe(404);
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      success: false,
+      status: "error",
+      statusCode: 400,
+      message: "Validation failed",
+    });
+    expect(res.body.details).toBeDefined();
   });
 });
 

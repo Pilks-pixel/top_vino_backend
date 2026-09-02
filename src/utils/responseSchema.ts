@@ -1,5 +1,5 @@
 import * as z from "zod/v4";
-import { UserIdSchema, UserProfile } from "./userSchema.ts";
+import { UserProfile } from "./userSchema.ts";
 
 /**
  * Creates a success response envelope for the given data schema.
@@ -27,7 +27,7 @@ export const SuccessMessageResponse = z
 export const Deck = z
   .strictObject({
     id: z.uuid(),
-    userId: UserIdSchema,
+    userId: z.uuid(),
     name: z.string(),
     topic: z.string().nullable(),
     isPublic: z
@@ -81,7 +81,7 @@ export const Card = z
 export const Review = z
   .strictObject({
     id: z.uuid(),
-    userId: UserIdSchema,
+    userId: z.uuid(),
     cardId: z.uuid(),
     reviewedAt: z.iso.datetime(),
     quality: z
@@ -99,7 +99,7 @@ export const Review = z
 
 export const Progress = z
   .strictObject({
-    userId: UserIdSchema,
+    userId: z.uuid(),
     cardId: z.uuid(),
     lastReviewedAt: z.iso.datetime().nullable(),
     nextReviewAt: z.iso.datetime().nullable(),

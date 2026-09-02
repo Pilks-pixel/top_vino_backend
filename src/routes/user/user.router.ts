@@ -11,7 +11,7 @@ import { UserUpdate } from "../../utils/userSchema.ts";
 import { authMiddleware } from "../../middlewares/authMiddleware.ts";
 import { requireOwnership } from "../../middlewares/requireOwnership.ts";
 import validationMiddleware from "../../middlewares/validationMiddleware.ts";
-import { UserIdParamsSchema } from "../../utils/paramsSchema.ts";
+import { IdParamsSchema } from "../../utils/paramsSchema.ts";
 
 const userRouter = express.Router();
 
@@ -19,13 +19,13 @@ userRouter.get("/me", authMiddleware, httpGetCurrentUser);
 userRouter.get(
   "/:id",
   authMiddleware,
-  validationMiddleware(UserIdParamsSchema, "params"),
+  validationMiddleware(IdParamsSchema, "params"),
   httpGetUserByID,
 );
 userRouter.put(
   "/:id",
   authMiddleware,
-  validationMiddleware(UserIdParamsSchema, "params"),
+  validationMiddleware(IdParamsSchema, "params"),
   requireOwnership(req => req.params.id),
   validationMiddleware(UserUpdate),
   httpUpdateUser,
@@ -33,7 +33,7 @@ userRouter.put(
 userRouter.delete(
   "/:id",
   authMiddleware,
-  validationMiddleware(UserIdParamsSchema, "params"),
+  validationMiddleware(IdParamsSchema, "params"),
   requireOwnership(req => req.params.id),
   httpDeleteUser,
 );

@@ -1,5 +1,4 @@
 import * as z from "zod/v4";
-import { UserIdSchema } from "./userSchema.ts";
 
 export const CreateDeckSchema = z
   .strictObject({
@@ -19,7 +18,7 @@ export const UpdateDeckSchema = z
 
 export const ListDecksQuerySchema = z
   .object({
-    userId: UserIdSchema.optional(),
+    userId: z.uuid().optional(),
   })
   .meta({ id: "ListDecksQuery" });
 

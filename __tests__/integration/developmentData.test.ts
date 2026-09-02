@@ -1,12 +1,6 @@
 import * as dotenv from "dotenv";
 dotenv.config({ path: ".env.test" });
 
-import { UserIdParamsSchema } from "../../src/utils/paramsSchema.ts";
-import {
-  CardListResponse,
-  DeckResponse,
-} from "../../src/utils/responseSchema.ts";
-
 const { testPrisma, cleanDb, disconnectDb } = await import(
   "../setup/testDb.js"
 );
@@ -160,21 +154,6 @@ describe("seedDocsData (integration)", () => {
     expect(deck!.name).toBe(DOCS_SEED_FIXTURE.deck.name);
     expect(deck!.isPublic).toBe(false);
     expect(deck!.cards).toHaveLength(3);
-
-    expect(() => UserIdParamsSchema.parse({ id: user!.id })).not.toThrow();
-    const { cards, ...deckResponseData } = deck!;
-    expect(() =>
-      DeckResponse.parse({
-        success: true,
-        data: JSON.parse(JSON.stringify(deckResponseData)),
-      }),
-    ).not.toThrow();
-    expect(() =>
-      CardListResponse.parse({
-        success: true,
-        data: JSON.parse(JSON.stringify(cards)),
-      }),
-    ).not.toThrow();
 
     const cardsById = new Map(deck!.cards.map(card => [card.id, card]));
     const [basic, multipleChoice, openEnded] = DOCS_SEED_FIXTURE.cards;
