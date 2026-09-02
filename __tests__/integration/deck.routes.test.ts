@@ -113,17 +113,11 @@ describe("GET /deck", () => {
     expect(res.body.data[0].userId).toBe(otherUser.id);
   });
 
-  it("returns 400 with the validation envelope when userId is not a UUID", async () => {
+  it("accepts opaque Better Auth user IDs", async () => {
     const res = await request(app).get("/deck?userId=not-a-uuid");
 
-    expect(res.status).toBe(400);
-    expect(res.body).toMatchObject({
-      success: false,
-      status: "error",
-      statusCode: 400,
-      message: "Validation failed",
-    });
-    expect(res.body.details).toBeDefined();
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true, data: [] });
   });
 
   it("returns 400 with the validation envelope when userId is repeated", async () => {
