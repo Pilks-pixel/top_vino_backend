@@ -116,6 +116,7 @@ describe("OpenAPI document", () => {
         "SubmitReview",
         "UserUpdate",
         "IdParams",
+        "UserIdParams",
         "DeckIdParams",
         "CardIdParams",
         "DeckCardParams",
@@ -149,6 +150,48 @@ describe("OpenAPI document", () => {
         "OpenApiDocumentResponse",
       ]),
     );
+  });
+
+  it("distinguishes Better Auth user IDs from application-owned UUIDs", async () => {
+    const response = await request(app).get("/openapi.json");
+    const { paths, components } = response.body;
+    const schemas = components.schemas;
+
+    for (const method of ["get", "put", "delete"]) {
+      expect(paths["/user/{id}"][method].parameters).toEqual([
+        expect.objectContaining({
+          name: "id",
+          schema: {
+            $ref: "#/components/schemas/UserIdParams/properties/id",
+          },
+        }),
+      ]);
+    }
+
+    for (const userIdSchema of [
+      schemas.UserIdParams.properties.id,
+      schemas.UserProfile.properties.id,
+      schemas.ListDecksQuery.properties.userId,
+      schemas.Deck.properties.userId,
+      schemas.Review.properties.userId,
+      schemas.Progress.properties.userId,
+    ]) {
+      expect(userIdSchema).toMatchObject({ type: "string", minLength: 1 });
+      expect(userIdSchema).not.toHaveProperty("format");
+    }
+
+    expect(schemas.IdParams.properties.id).toMatchObject({
+      type: "string",
+      format: "uuid",
+    });
+    expect(schemas.CardIdParams.properties.cardId).toMatchObject({
+      type: "string",
+      format: "uuid",
+    });
+    expect(schemas.Review.properties.id).toMatchObject({
+      type: "string",
+      format: "uuid",
+    });
   });
 
   it("does not publish persistence-only schemas", async () => {
