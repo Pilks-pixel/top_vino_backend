@@ -4,10 +4,11 @@ A spaced repetition learning/flashcard application backend built with Node.js, E
 
 ## 📚 Documentation
 
-- [Project Review & Roadmap](./doc/PROJECT_REVIEW.md) - Complete overview of the project status and development roadmap
-- [Phase 1: Error Handling](./doc/PHASE_1_ERROR_HANDLING.md) - Completed implementation details and acceptance criteria
-<!-- - [Testing Guide](./doc/TESTING.md) - How to run tests and how the test database setup works -->
-- [Phase 2 TDD PRD](./plans/phase-2-tdd-prd.md) - TDD-first execution plan for testing setup and core CRUD delivery
+- [Domain glossary](./docs/CONTEXT.md) — the ubiquitous language for decks, cards, access, and study
+- [Architecture decision records](./docs/adr/) — settled decisions; append-only
+- [Testing guide](./docs/TESTING.md) — how to run tests and how the test database setup works
+- [Logging contract](./docs/logging.md) — levels, redaction, correlation, failure events
+- [Agent docs](./docs/agents/) — issue tracker, triage labels, domain doc conventions
 
 ## 🚀 Quick Start
 
@@ -20,39 +21,56 @@ docker-compose up
 
 # Or run locally (requires PostgreSQL)
 npm run dev
+
+# Run the test suite (PostgreSQL must be running)
+npm test
 ```
+
+Copy `.env.example` to `.env` and fill in the required values before starting.
 
 ## 📋 Current Status
 
-**In Development - Phase 2 Delivered, Preparing Phase 3 (Auth)**
+**Phases 1–5 complete. Deck Access refactor delivered. 206 tests passing.**
 
 ### Completed ✅
 
-- User CRUD operations
-- Deck CRUD operations
-- Card CRUD operations
-- Review submission, due-card queries, and progress retrieval
-- SM-2 based review scheduling logic in review service
-- Jest + Supertest automated test harness with unit and integration suites
-- Centralized error handling with Prisma and validation support
-- Database schema and migrations
-- Docker development environment
-
-### In Progress 🚧
-
-- Refining review scheduling behavior (SM-2 interval tuning)
-- Preparing authentication and authorization implementation (Phase 3)
-- Keeping documentation aligned with current architecture and roadmap
+- Centralized error handling with Prisma and Zod validation support
+- Deck, Card, and Review CRUD as TDD vertical slices with SM-2 spaced repetition scheduling
+- Authentication via Better Auth (email/password + Google OAuth), cookie sessions with `subscriptionType` exposed for FREE/PRO gating
+- Authorization middleware: `authMiddleware`, `requireOwnership`, `requireSubscription`
+- Centralized Deck Access module (`deckAccess.service.ts`) — every deck/card load names a Requestor and an Action; collection queries compose a visibility scope. Covers owner, editor/viewer collaborators, and public decks
+- Production hardening: env validation on startup, helmet, rate limiting, request size limits
+- Structured logging via pino with redaction and request correlation (`/health` and `/ready` endpoints included)
+- Graceful shutdown on SIGTERM/SIGINT
+- Jest + Supertest harness against a dedicated test database; coverage runs reliably green
 
 ### Next Up 📌
 
-- Add `/auth/register` and `/auth/login` endpoints
-- Add JWT auth middleware and route protection
-- Replace query-based `userId` ownership checks with `req.user.id`
+- Minimal CI workflow: lint + typecheck + tests on every PR
+- API contract documentation (OpenAPI or equivalent) ahead of frontend work
+- Frontend application
 
-See [PROJECT_REVIEW.md](./doc/PROJECT_REVIEW.md) for detailed roadmap.
+## 🗺️ Roadmap — Phase 6: Deployment (not started)
 
-## 🏗️ Backend Architecture (Current)
+Two options; pick one when ready. Continuous integration is independent of this choice and should land first.
+
+### Option A: Simple deployment (1–2 days)
+
+- PM2 process manager in cluster mode (`ecosystem.config.js`)
+- Deploy to a VPS (Digital Ocean, Linode, AWS EC2)
+- Nginx reverse proxy + Let's Encrypt SSL
+- PostgreSQL on the same server or managed
+
+### Option B: Cloud native (1–2 weeks)
+
+- AWS: ECS/Fargate, RDS, ALB, CloudWatch, Secrets Manager, auto scaling
+- Or a PaaS: Render, Railway, Fly.io
+- Infrastructure as code (Terraform / AWS CDK)
+- CD pipeline: automated deploy on merge to main, blue-green deployments
+
+Deferred features (from earlier phases): Apple OAuth, MFA, passkeys, admin roles, AI grading/generation, FSRS evolution of the SM-2 scheduler.
+
+## 🏗️ Backend Architecture
 
 ```mermaid
 flowchart TD
@@ -77,69 +95,29 @@ Controllers --> Services
 Services --> Models
 Models --> Prisma
 Prisma --> DB
-
-Services -. SM-2 Scheduling .-> Services
-Middleware -. Validation & Error Handling .-> Controllers
 ```
 
 ### Project structure
-``` ascii
+
+```
 src/
-├── routes/
-├── controllers/
-├── services/
-├── models/
-├── middleware/
-├── utils/
-└── prisma/
+├── app.ts                  # Express app config — Better Auth mounted before express.json()
+├── server.ts               # Entry point with graceful shutdown
+├── config/                 # Rate limiter configuration
+├── lib/                    # Better Auth config, pino logger, Prisma client
+├── middlewares/            # authMiddleware, requireOwnership, requireSubscription,
+│                           # errorHandler, validationMiddleware
+├── model/                  # Data-access layer (users, deck, card, review)
+├── routes/                 # Controllers & routers per feature (user, deck, card, review)
+├── services/               # Business logic incl. deckAccess.service.ts and SM-2 scheduler
+├── types/                  # Express request augmentation
+└── utils/                  # AppError hierarchy, Zod schemas, catchAsync, env validation
 ```
 
-``` ascii
-Roadmap
+### Layer responsibilities
 
-Authentication
-      │
-      ▼
- Middleware
-
-Deck Sharing
-      │
-      ▼
- Services
-
-AI Cards
-      │
-      ▼
- Card Service
-
-FSRS
-      │
-      ▼
- Review Service
-```
-
-### 1) Layer responsibilities
-
-- Client: sends HTTP requests to the backend.
-- API layer: route modules define endpoint groups and connect handlers.
-- Middleware: applies parsing, logging, validation, async error forwarding, and centralized error formatting.
-- Controllers: map request data to service calls and return HTTP responses.
-- Services: enforce business rules, including review interval scheduling logic.
-- Models: isolate Prisma data-access operations.
-- Database layer: Prisma Client executes queries against PostgreSQL.
-
-### 2) Request lifecycle
-
-- Request path: Client -> Route -> Middleware -> Controller -> Service -> Model -> Prisma -> PostgreSQL.
-- Global middleware runs first (CORS, Morgan, JSON parser), then feature routes.
-- Validation middleware runs on validated routes before controller logic.
-- Controllers wrapped with catchAsync pass async failures into the global error handler.
-- Prisma and domain errors are transformed into consistent API error responses.
-
-### 3) Planned / upcoming features
-
-- JWT authentication middleware plus auth endpoints are planned, not implemented.
-- Deck and review ownership checks are planned to move from userId query params to req.user.
-- Deck collaboration endpoints are planned from existing schema and roadmap docs.
-- AI grading and AI-generated card flows are planned based on schema and roadmap notes.
-- FSRS scheduling is planned as an evolution of the current review service scheduling logic.
+- **Routes/controllers**: map HTTP requests to service calls and return responses.
+- **Middlewares**: session resolution, validation, security headers, rate limiting, structured request logging, centralized error formatting.
+- **Services**: enforce business rules. Deck Access resolves ownership, collaborator role, and public visibility into a single answer; cards and reviews inherit their access from their deck.
+- **Models**: isolate Prisma data-access operations.
+- **Request lifecycle**: Client → Route → Middleware → Controller → Service → Model → Prisma → PostgreSQL. Errors flow through the global error handler into a consistent `{ success, status, statusCode, message }` shape.
