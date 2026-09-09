@@ -1,13 +1,13 @@
 import { fromNodeHeaders } from "better-auth/node";
-
 import { auth } from "../lib/auth.ts";
 import { catchAsync } from "../utils/catchAsync.ts";
 import { UnauthorizedError } from "../utils/appError.ts";
+import type { SubscriptionTier } from "../utils/userSchema.ts";
 
 type SessionUser = {
   id: string;
   email: string;
-  subscriptionType?: "FREE" | "PRO";
+  subscriptionType?: SubscriptionTier;
 };
 
 export const authMiddleware = catchAsync(async (req, _res, next) => {

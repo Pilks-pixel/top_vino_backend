@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { z } from "zod/v4";
 import { logger } from "../lib/logger.ts";
 import { AppError, ValidationError } from "../utils/appError.ts";
 import {
@@ -9,14 +10,55 @@ import {
   isPrismaValidationError,
 } from "../utils/prismaErrorHandler.ts";
 
-interface ErrorResponse {
-  success: false;
-  status: "error";
-  statusCode: number;
-  message: string;
-  details?: unknown;
-  stack?: string;
-}
+/**
+ * Treeified Zod error shape (output of z.treeifyError): a list of messages
+ * for the current node plus recursively nested per-property nodes.
+ */
+const treeifiedErrorShape: z.ZodType<TreeifiedErrorNode> = z.lazy(() =>
+  z.object({
+    errors: z.array(z.string()).describe("Error messages for this field"),
+    properties: z
+      .record(z.string(), treeifiedErrorShape)
+      .optional()
+      .describe("Per-field nested validation errors"),
+    items: z
+      .array(treeifiedErrorShape)
+      .optional()
+      .describe("Per-element validation errors for array fields"),
+  }),
+);
+
+z.globalRegistry.add(treeifiedErrorShape, { id: "ValidationErrorDetails" });
+
+type TreeifiedErrorNode = {
+  errors: string[];
+  properties?: Record<string, TreeifiedErrorNode>;
+  items?: TreeifiedErrorNode[];
+};
+
+/**
+ * Canonical error envelope schema. Every documented error response in the API
+ * conforms to this shape; later tickets' error responses inherit it.
+ */
+export const errorResponseSchema = z
+  .object({
+    success: z.literal(false).describe("Always false for error responses"),
+    status: z.literal("error").describe("Discriminator for error responses"),
+    statusCode: z.number().int().describe("HTTP status code"),
+    message: z.string().describe("Human-readable error message"),
+    details: treeifiedErrorShape
+      .optional()
+      .describe(
+        "Treeified validation error details, present only on validation failures",
+      ),
+    stack: z
+      .string()
+      .optional()
+      .describe("Stack trace, development environments only"),
+  })
+  .meta({ id: "ErrorResponse" });
+
+export type ErrorResponse = z.infer<typeof errorResponseSchema>;
 
 /**
  * Determines if we're in development environment
@@ -100,7 +142,7 @@ function createErrorResponse(
 
   // Include validation details if present
   if (err instanceof ValidationError && err.details) {
-    response.details = err.details;
+    response.details = err.details as ErrorResponse["details"];
   }
 
   // Include stack trace in development only

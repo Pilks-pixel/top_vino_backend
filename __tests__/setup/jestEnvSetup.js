@@ -4,3 +4,5 @@ process.env.DATABASE_URL =
   "postgresql://pete:hello_you@localhost:5432/top_vino_test";
 process.env.NODE_ENV = "test";
 process.env.PORT = "8001";
+process.env.BETTER_AUTH_SECRET = "top-vino-test-only-secret";
+process.env.BETTER_AUTH_URL = "http://localhost:8001";

@@ -8,17 +8,16 @@ import { jest } from "@jest/globals";
 
 // Mock before importing the module under test
 jest.unstable_mockModule("../../src/model/usersModel.js", () => ({
-  getAllUsers: jest.fn(),
   getUserByID: jest.fn(),
   putUserByID: jest.fn(),
   deleteUserByID: jest.fn(),
 }));
 
-const { getAllUsers, getUserByID, putUserByID, deleteUserByID } = await import(
+const { getUserByID, putUserByID, deleteUserByID } = await import(
   "../../src/model/usersModel.js"
 );
 
-const { readUsers, readUserByID, updateUser, deleteUser } = await import(
+const { readUserByID, updateUser, deleteUser } = await import(
   "../../src/services/user.service.js"
 );
 
@@ -36,21 +35,6 @@ const mockUser = {
 };
 
 beforeEach(() => jest.clearAllMocks());
-
-// ─── readUsers ───────────────────────────────────────────────────────────────
-
-describe("readUsers", () => {
-  it("returns all users when records exist", async () => {
-    jest.mocked(getAllUsers).mockResolvedValue([mockUser]);
-    const result = await readUsers();
-    expect(result).toEqual([mockUser]);
-  });
-
-  it("throws NotFoundError when no users exist", async () => {
-    jest.mocked(getAllUsers).mockResolvedValue([]);
-    await expect(readUsers()).rejects.toBeInstanceOf(NotFoundError);
-  });
-});
 
 // ─── readUserByID ────────────────────────────────────────────────────────────
 

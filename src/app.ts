@@ -5,6 +5,7 @@ import cors from "cors";
 import { pinoHttp } from "pino-http";
 import helmet from "helmet";
 import { toNodeHandler } from "better-auth/node";
+import { apiReference } from "@scalar/express-api-reference";
 
 import { auth } from "./lib/auth.ts";
 import { logger, serializeRequest, serializeResponse } from "./lib/logger.ts";
@@ -15,6 +16,7 @@ import cardRouter from "./routes/card/card.router.ts";
 import reviewRouter from "./routes/review/review.router.ts";
 import { createErrorHandler } from "./middlewares/errorHandler.ts";
 import { authLimiter, generalLimiter } from "./config/rateLimits.ts";
+import { openApiDocument } from "./openapi.ts";
 
 const REQUEST_ID_HEADER = "x-request-id";
 const MAX_REQUEST_ID_LENGTH = 128;
@@ -75,6 +77,30 @@ export function createApp(applicationLogger = logger) {
       },
     }),
   );
+  if (process.env.NODE_ENV === "development") {
+    app.get(
+      "/docs",
+      apiReference({
+        pageTitle: "Top Vino API Reference",
+        sources: [
+          {
+            title: "Top Vino API",
+            slug: "top-vino",
+            url: "/openapi.json",
+            default: true,
+          },
+          {
+            title: "Authentication",
+            slug: "authentication",
+            url: "/api/auth/open-api/generate-schema",
+          },
+        ],
+        persistAuth: false,
+        customFetch: (input, init) =>
+          window.fetch(input, { ...init, credentials: "include" }),
+      }),
+    );
+  }
   app.use(helmet());
   app.use(
     cors({
@@ -107,6 +133,10 @@ export function createApp(applicationLogger = logger) {
   app.all("/api/auth/{*any}", toNodeHandler(auth));
   app.use(express.json({ limit: "10kb" }));
   app.use(generalLimiter);
+
+  app.get("/openapi.json", (_req, res) => {
+    res.json(openApiDocument);
+  });
 
   app.get("/", async (_req, res) => {
     res.send("Hello World!");

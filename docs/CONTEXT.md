@@ -36,6 +36,10 @@ _Avoid_: operation, permission, verb
 A user granted access to a deck they do not own, as either an editor or a viewer. An editor may read and edit; a viewer may only read. Neither may delete — that stays with the owner.
 _Avoid_: shared user, member, contributor
 
+**User Profile**:
+The representation of a user exposed through the API — identity and tier, without persistence details. A Requestor *is* a user acting; a User Profile is a user described.
+_Avoid_: User DTO, account, session user
+
 **Subscription Tier**:
 Whether a user is on the free or pro plan. Governs which features they may reach, and is a separate question from deck access — tier never decides who owns what.
 _Avoid_: plan, membership, subscription level

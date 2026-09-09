@@ -8,24 +8,38 @@ import {
 } from "./deck.controller.ts";
 import validationMiddleware from "../../middlewares/validationMiddleware.ts";
 import { authMiddleware } from "../../middlewares/authMiddleware.ts";
-import { CreateDeckSchema, UpdateDeckSchema } from "../../utils/deckSchema.ts";
+import {
+  CreateDeckSchema,
+  UpdateDeckSchema,
+  ListDecksQuerySchema,
+} from "../../utils/deckSchema.ts";
+import { IdParamsSchema } from "../../utils/paramsSchema.ts";
 
 const deckRouter = express.Router();
 
-deckRouter.get("/", authMiddleware, httpListDecks);
-deckRouter.get("/:id", authMiddleware, httpGetDeck);
-deckRouter.post(
+deckRouter.use(authMiddleware);
+
+deckRouter.get(
   "/",
-  authMiddleware,
-  validationMiddleware(CreateDeckSchema),
-  httpCreateDeck,
+  validationMiddleware(ListDecksQuerySchema, "query"),
+  httpListDecks,
 );
+deckRouter.get(
+  "/:id",
+  validationMiddleware(IdParamsSchema, "params"),
+  httpGetDeck,
+);
+deckRouter.post("/", validationMiddleware(CreateDeckSchema), httpCreateDeck);
 deckRouter.put(
   "/:id",
-  authMiddleware,
+  validationMiddleware(IdParamsSchema, "params"),
   validationMiddleware(UpdateDeckSchema),
   httpUpdateDeck,
 );
-deckRouter.delete("/:id", authMiddleware, httpDeleteDeck);
+deckRouter.delete(
+  "/:id",
+  validationMiddleware(IdParamsSchema, "params"),
+  httpDeleteDeck,
+);
 
 export default deckRouter;

@@ -1,6 +1,5 @@
 import type { Request, Response } from "express";
 import { catchAsync } from "../../utils/catchAsync.ts";
-import { BadRequestError } from "../../utils/appError.ts";
 import {
   listDecksForUser,
   getDeck,
@@ -10,11 +9,8 @@ import {
 } from "../../services/deck.service.ts";
 
 export const httpListDecks = catchAsync(async (req: Request, res: Response) => {
-  const rawUserId = req.query.userId;
-  if (rawUserId !== undefined && typeof rawUserId !== "string") {
-    throw new BadRequestError("Invalid userId query parameter");
-  }
-  const targetUserId = rawUserId ?? req.user.id;
+  const userId = req.query.userId;
+  const targetUserId = typeof userId === "string" ? userId : req.user.id;
   const decks = await listDecksForUser(req.user, targetUserId);
   res.status(200).json({ success: true, data: decks });
 });

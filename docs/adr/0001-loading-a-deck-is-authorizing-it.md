@@ -16,4 +16,4 @@ There is deliberately no `getDeckByID(id)` or `getCardByID(id)`. Reintroducing o
 
 Collections are covered by the same rule through a visibility scope composed into the query, so unauthorized rows are never selected rather than filtered out afterwards. This couples Deck Access to the persistence layer's query shape, which we accepted in exchange for correct pagination and counts.
 
-A requestor who lacks privilege on a deck that exists receives 403, not 404. Ids are UUIDv4 and cannot be enumerated, so confirming existence gains an attacker nothing, and honest errors are worth considerably more when diagnosing permission bugs.
+A requestor who lacks privilege on a deck that exists receives 403, not 404. Application-owned Deck and Card identifiers are UUIDs and cannot be practically enumerated, so confirming existence gains an attacker little, and honest errors are worth considerably more when diagnosing access bugs. Requestor and User Profile identifiers are owned by Better Auth and treated as opaque strings; Deck Access relies on authenticated identity and exact identifier equality, never identifier format or presumed unguessability.
