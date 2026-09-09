@@ -4,9 +4,9 @@ dotenv.config({ path: ".env.test" });
 import { jest } from "@jest/globals";
 
 const request = (await import("supertest")).default;
-const { createApp } = await import("../../src/app.js");
-const { createLogger } = await import("../../src/lib/logger.js");
-const { disconnectPrisma } = await import("../../src/lib/prisma.js");
+const { createApp } = await import("../../src/app.ts");
+const { createLogger } = await import("../../src/lib/logger.ts");
+const { disconnectPrisma } = await import("../../src/lib/prisma.ts");
 
 const output: string[] = [];
 const app = createApp(

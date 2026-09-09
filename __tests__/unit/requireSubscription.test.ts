@@ -2,7 +2,7 @@ import { jest } from "@jest/globals";
 import type { NextFunction, Request, Response } from "express";
 
 import { requireSubscription } from "../../src/middlewares/requireSubscription.ts";
-import { ForbiddenError, UnauthorizedError } from "../../src/utils/appError.js";
+import { ForbiddenError, UnauthorizedError } from "../../src/utils/appError.ts";
 
 describe("requireSubscription", () => {
   it("throws UnauthorizedError when req.user is missing", () => {

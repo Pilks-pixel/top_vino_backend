@@ -58,7 +58,7 @@ export const errorResponseSchema = z
   })
   .meta({ id: "ErrorResponse" });
 
-export type ErrorResponse = z.infer<typeof errorResponseSchema>;
+type ErrorResponse = z.infer<typeof errorResponseSchema>;
 
 /**
  * Determines if we're in development environment

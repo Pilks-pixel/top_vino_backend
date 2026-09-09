@@ -1,5 +1,4 @@
 import { NotFoundError, BadRequestError } from "../utils/appError.ts";
-import type { Requestor } from "./deckAccess.service.ts";
 import { loadCard, visibleDeckScope } from "./deckAccess.service.ts";
 import {
   createReview,
@@ -8,6 +7,7 @@ import {
   upsertCardProgress,
 } from "../model/reviewModel.ts";
 import type { SubmitReviewInput } from "../utils/reviewSchema.ts";
+import type { Requestor } from "../types/requestor.ts";
 
 /**
  * SM-2 algorithm: computes next interval and ease factor from current state.

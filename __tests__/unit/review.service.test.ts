@@ -9,12 +9,12 @@ import type {
   Prisma,
 } from "../../generated/prisma/client.js";
 
-jest.unstable_mockModule("../../src/services/deckAccess.service.js", () => ({
+jest.unstable_mockModule("../../src/services/deckAccess.service.ts", () => ({
   loadCard: jest.fn(),
   visibleDeckScope: jest.fn(),
 }));
 
-jest.unstable_mockModule("../../src/model/reviewModel.js", () => ({
+jest.unstable_mockModule("../../src/model/reviewModel.ts", () => ({
   createReview: jest.fn(),
   getDueCards: jest.fn(),
   getCardProgress: jest.fn(),
@@ -22,20 +22,20 @@ jest.unstable_mockModule("../../src/model/reviewModel.js", () => ({
 }));
 
 const { loadCard, visibleDeckScope } = await import(
-  "../../src/services/deckAccess.service.js"
+  "../../src/services/deckAccess.service.ts"
 );
 const { createReview, getDueCards, getCardProgress, upsertCardProgress } =
-  await import("../../src/model/reviewModel.js");
+  await import("../../src/model/reviewModel.ts");
 
 const { submitReview, listDueCards, getProgress } = await import(
-  "../../src/services/review.service.js"
+  "../../src/services/review.service.ts"
 );
 
 import {
   NotFoundError,
   BadRequestError,
   ForbiddenError,
-} from "../../src/utils/appError.js";
+} from "../../src/utils/appError.ts";
 
 const mockCard: Card = {
   id: "card-1",

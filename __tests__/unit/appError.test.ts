@@ -12,7 +12,7 @@ import {
   ForbiddenError,
   NotFoundError,
   ConflictError,
-} from "../../src/utils/appError.js";
+} from "../../src/utils/appError.ts";
 
 describe("AppError", () => {
   it("sets status and message", () => {

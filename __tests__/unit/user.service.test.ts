@@ -7,21 +7,21 @@
 import { jest } from "@jest/globals";
 
 // Mock before importing the module under test
-jest.unstable_mockModule("../../src/model/usersModel.js", () => ({
+jest.unstable_mockModule("../../src/model/usersModel.ts", () => ({
   getUserByID: jest.fn(),
   putUserByID: jest.fn(),
   deleteUserByID: jest.fn(),
 }));
 
 const { getUserByID, putUserByID, deleteUserByID } = await import(
-  "../../src/model/usersModel.js"
+  "../../src/model/usersModel.ts"
 );
 
 const { readUserByID, updateUser, deleteUser } = await import(
-  "../../src/services/user.service.js"
+  "../../src/services/user.service.ts"
 );
 
-import { NotFoundError } from "../../src/utils/appError.js";
+import { NotFoundError } from "../../src/utils/appError.ts";
 
 const mockUser = {
   id: "user-1",

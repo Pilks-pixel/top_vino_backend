@@ -94,9 +94,9 @@ const LOG_LEVELS = [
   "silent",
 ] as const;
 
-export type LogLevel = (typeof LOG_LEVELS)[number];
+type LogLevel = (typeof LOG_LEVELS)[number];
 
-export interface LoggerOptions {
+interface LoggerOptions {
   environment?: string;
   logLevel?: string;
   destination?: pino.DestinationStream;

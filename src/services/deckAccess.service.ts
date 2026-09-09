@@ -2,9 +2,9 @@ import type { Prisma } from "../../generated/prisma/client.js";
 import { CollaboratorRole } from "../../generated/prisma/index.js";
 import prisma from "../lib/prisma.ts";
 import { ForbiddenError, NotFoundError } from "../utils/appError.ts";
+import type { Requestor } from "../types/requestor.ts";
 
-export type Requestor = { id: string };
-export type Action = "read" | "edit" | "delete";
+type Action = "read" | "edit" | "delete";
 
 /**
  * Returns a Prisma where input that filters decks visible to the requestor.

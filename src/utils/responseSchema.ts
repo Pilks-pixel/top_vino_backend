@@ -1,5 +1,5 @@
 import * as z from "zod/v4";
-import { UserIdSchema, UserProfile } from "./userSchema.ts";
+import { UserIdSchema, UserProfileSchema } from "./userSchema.ts";
 
 /**
  * Creates a success response envelope for the given data schema.
@@ -156,7 +156,7 @@ export const ProgressResponse = SuccessEnvelope(Progress).meta({
   id: "ProgressResponse",
 });
 
-export const UserProfileResponse = SuccessEnvelope(UserProfile).meta({
+export const UserProfileResponse = SuccessEnvelope(UserProfileSchema).meta({
   id: "UserProfileResponse",
 });
 export const UserDeleteResponse = SuccessMessageResponse.meta({
@@ -212,25 +212,3 @@ export const OpenApiDocumentResponse = z
     }),
   })
   .meta({ id: "OpenApiDocumentResponse" });
-
-export type DeckListResponseData = z.infer<typeof DeckListResponse>;
-export type DeckResponseData = z.infer<typeof DeckResponse>;
-export type DeckCreateResponseData = z.infer<typeof DeckCreateResponse>;
-export type DeckUpdateResponseData = z.infer<typeof DeckUpdateResponse>;
-export type DeckDeleteResponseData = z.infer<typeof DeckDeleteResponse>;
-export type CardListResponseData = z.infer<typeof CardListResponse>;
-export type CardResponseData = z.infer<typeof CardResponse>;
-export type CardCreateResponseData = z.infer<typeof CardCreateResponse>;
-export type CardUpdateResponseData = z.infer<typeof CardUpdateResponse>;
-export type CardDeleteResponseData = z.infer<typeof CardDeleteResponse>;
-export type ReviewSubmitResponseData = z.infer<typeof ReviewSubmitResponse>;
-export type DueCardsResponseData = z.infer<typeof DueCardsResponse>;
-export type ProgressResponseData = z.infer<typeof ProgressResponse>;
-export type UserProfileResponseData = z.infer<typeof UserProfileResponse>;
-export type UserDeleteResponseData = z.infer<typeof UserDeleteResponse>;
-export type SuccessMessageResponseData = z.infer<typeof SuccessMessageResponse>;
-export type DeckData = z.infer<typeof Deck>;
-export type CardData = z.infer<typeof Card>;
-export type ReviewData = z.infer<typeof Review>;
-export type ProgressData = z.infer<typeof Progress>;
-export type ReviewSubmitData = z.infer<typeof ReviewSubmit>;

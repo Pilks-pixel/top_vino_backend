@@ -9,7 +9,7 @@ import {
 } from "../../src/utils/responseSchema.ts";
 
 const { testPrisma, cleanDb, disconnectDb } = await import(
-  "../setup/testDb.js"
+  "../setup/testDb.ts"
 );
 const {
   createTestUser,
@@ -17,7 +17,7 @@ const {
   createTestCard,
   createTestProgress,
   createTestDeckCollaborator,
-} = await import("../setup/factories.js");
+} = await import("../setup/factories.ts");
 const {
   resetDevelopmentDatabase,
   seedDocsData,

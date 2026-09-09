@@ -1,4 +1,3 @@
-import type { Requestor } from "./deckAccess.service.ts";
 import { loadCard, loadDeck } from "./deckAccess.service.ts";
 import {
   getCardsForDeck,
@@ -8,6 +7,7 @@ import {
 } from "../model/cardModel.ts";
 import { NotFoundError } from "../utils/appError.ts";
 import type { CreateCardInput, UpdateCardInput } from "../utils/cardSchema.ts";
+import type { Requestor } from "../types/requestor.ts";
 
 export async function listCardsForDeck(requestor: Requestor, deckId: string) {
   await loadDeck(requestor, deckId, "read");

@@ -1,8 +1,7 @@
 import type { Prisma } from "../../generated/prisma/client.js";
 import prisma from "../lib/prisma.ts";
-import type { CreateDeckInput, UpdateDeckInput } from "../utils/deckSchema.ts";
-
-type CreateDeckData = CreateDeckInput & { userId: string };
+import type { CreateDeckData } from "../types/deck.ts";
+import type { UpdateDeckInput } from "../utils/deckSchema.ts";
 
 /**
  * Get decks by scope for a specific user.

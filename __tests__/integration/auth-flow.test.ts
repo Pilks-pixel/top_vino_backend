@@ -2,9 +2,9 @@ import * as dotenv from "dotenv";
 dotenv.config({ path: ".env.test" });
 
 const request = (await import("supertest")).default;
-const { app } = await import("../setup/testApp.js");
+const { app } = await import("../setup/testApp.ts");
 const { cleanDb, disconnectDb, testPrisma } = await import(
-  "../setup/testDb.js"
+  "../setup/testDb.ts"
 );
 const {
   CardCreateResponse,
@@ -15,7 +15,7 @@ const {
   ReviewSubmitResponse,
   UserDeleteResponse,
   UserProfileResponse,
-} = await import("../../src/utils/responseSchema.js");
+} = await import("../../src/utils/responseSchema.ts");
 
 const SIGN_UP_BODY = {
   name: "Auth Flow User",

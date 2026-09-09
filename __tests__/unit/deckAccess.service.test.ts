@@ -6,7 +6,7 @@ const prismaMock = {
   card: { findUnique: jest.fn<() => Promise<unknown>>() },
 };
 
-jest.unstable_mockModule("../../src/lib/prisma.js", () => ({
+jest.unstable_mockModule("../../src/lib/prisma.ts", () => ({
   default: prismaMock,
 }));
 
@@ -15,10 +15,10 @@ jest.unstable_mockModule("../../generated/prisma/index.js", () => ({
 }));
 
 const { loadDeck, loadCard, visibleDeckScope } = await import(
-  "../../src/services/deckAccess.service.js"
+  "../../src/services/deckAccess.service.ts"
 );
 
-import { ForbiddenError, NotFoundError } from "../../src/utils/appError.js";
+import { ForbiddenError, NotFoundError } from "../../src/utils/appError.ts";
 
 const ownerRequestor = { id: "owner-1" };
 const editorRequestor = { id: "editor-1" };

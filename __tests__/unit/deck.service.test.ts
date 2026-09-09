@@ -5,14 +5,14 @@
  */
 import { jest } from "@jest/globals";
 
-jest.unstable_mockModule("../../src/model/deckModel.js", () => ({
+jest.unstable_mockModule("../../src/model/deckModel.ts", () => ({
   getDecksByScope: jest.fn(),
   createDeck: jest.fn(),
   updateDeckByID: jest.fn(),
   deleteDeckByID: jest.fn(),
 }));
 
-jest.unstable_mockModule("../../src/services/deckAccess.service.js", () => ({
+jest.unstable_mockModule("../../src/services/deckAccess.service.ts", () => ({
   loadDeck: jest.fn(),
   visibleDeckScope: jest.fn(),
 }));
@@ -22,15 +22,15 @@ const {
   createDeck: createDeckModel,
   updateDeckByID,
   deleteDeckByID,
-} = await import("../../src/model/deckModel.js");
+} = await import("../../src/model/deckModel.ts");
 const { loadDeck, visibleDeckScope } = await import(
-  "../../src/services/deckAccess.service.js"
+  "../../src/services/deckAccess.service.ts"
 );
 
 const { listDecksForUser, getDeck, createDeck, updateDeck, deleteDeck } =
-  await import("../../src/services/deck.service.js");
+  await import("../../src/services/deck.service.ts");
 
-import { NotFoundError, ForbiddenError } from "../../src/utils/appError.js";
+import { NotFoundError, ForbiddenError } from "../../src/utils/appError.ts";
 
 const requestor = {
   id: "user-1",
