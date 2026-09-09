@@ -4,7 +4,7 @@ import type { NextFunction, Request, Response } from "express";
 const mockGetSession = jest.fn<() => Promise<unknown>>();
 const mockFromNodeHeaders = jest.fn(headers => headers);
 
-jest.unstable_mockModule("../../src/lib/auth.js", () => ({
+jest.unstable_mockModule("../../src/lib/auth.ts", () => ({
   auth: {
     api: {
       getSession: mockGetSession,
@@ -19,7 +19,7 @@ jest.unstable_mockModule("better-auth/node", () => ({
 const { authMiddleware } = await import(
   "../../src/middlewares/authMiddleware.ts"
 );
-import { UnauthorizedError } from "../../src/utils/appError.js";
+import { UnauthorizedError } from "../../src/utils/appError.ts";
 
 const flushAsync = () => new Promise<void>(resolve => setImmediate(resolve));
 

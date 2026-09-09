@@ -28,9 +28,3 @@ export const CardIdParamsSchema = z
 export const DeckCardParamsSchema = DeckIdParamsSchema.extend({
   id: z.uuid(),
 }).meta({ id: "DeckCardParams" });
-
-export type IdParams = z.infer<typeof IdParamsSchema>;
-export type UserIdParams = z.infer<typeof UserIdParamsSchema>;
-export type DeckIdParams = z.infer<typeof DeckIdParamsSchema>;
-export type CardIdParams = z.infer<typeof CardIdParamsSchema>;
-export type DeckCardParams = z.infer<typeof DeckCardParamsSchema>;

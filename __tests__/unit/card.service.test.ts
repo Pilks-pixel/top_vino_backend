@@ -3,12 +3,12 @@
  */
 import { jest } from "@jest/globals";
 
-jest.unstable_mockModule("../../src/services/deckAccess.service.js", () => ({
+jest.unstable_mockModule("../../src/services/deckAccess.service.ts", () => ({
   loadDeck: jest.fn(),
   loadCard: jest.fn(),
 }));
 
-jest.unstable_mockModule("../../src/model/cardModel.js", () => ({
+jest.unstable_mockModule("../../src/model/cardModel.ts", () => ({
   getCardsForDeck: jest.fn(),
   createCard: jest.fn(),
   updateCardByID: jest.fn(),
@@ -16,19 +16,19 @@ jest.unstable_mockModule("../../src/model/cardModel.js", () => ({
 }));
 
 const { loadDeck, loadCard } = await import(
-  "../../src/services/deckAccess.service.js"
+  "../../src/services/deckAccess.service.ts"
 );
 const {
   getCardsForDeck,
   createCard: createCardModel,
   updateCardByID,
   deleteCardByID,
-} = await import("../../src/model/cardModel.js");
+} = await import("../../src/model/cardModel.ts");
 
 const { listCardsForDeck, getCard, createCard, updateCard, deleteCard } =
-  await import("../../src/services/card.service.js");
+  await import("../../src/services/card.service.ts");
 
-import { ForbiddenError, NotFoundError } from "../../src/utils/appError.js";
+import { ForbiddenError, NotFoundError } from "../../src/utils/appError.ts";
 
 const requestor = { id: "user-1" };
 

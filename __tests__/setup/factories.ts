@@ -6,7 +6,7 @@
  *
  * Every factory accepts a partial override so tests can vary specific fields.
  */
-import { testPrisma } from "./testDb.js";
+import { testPrisma } from "./testDb.ts";
 import { randomUUID } from "node:crypto";
 import type {
   User,

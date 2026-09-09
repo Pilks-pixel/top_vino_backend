@@ -9,7 +9,7 @@ dotenv.config({ path: ".env.test" });
 import { jest } from "@jest/globals";
 
 // Mock auth BEFORE importing app
-jest.unstable_mockModule("../../src/lib/auth.js", () => ({
+jest.unstable_mockModule("../../src/lib/auth.ts", () => ({
   auth: {
     api: { getSession: jest.fn() },
     handler: jest.fn(),
@@ -17,13 +17,13 @@ jest.unstable_mockModule("../../src/lib/auth.js", () => ({
 }));
 
 const request = (await import("supertest")).default;
-const { auth } = await import("../../src/lib/auth.js");
-const { app } = await import("../setup/testApp.js");
-const { cleanDb, disconnectDb } = await import("../setup/testDb.js");
+const { auth } = await import("../../src/lib/auth.ts");
+const { app } = await import("../setup/testApp.ts");
+const { cleanDb, disconnectDb } = await import("../setup/testDb.ts");
 const { createTestUser, createTestDeck, createTestDeckCollaborator } =
-  await import("../setup/factories.js");
+  await import("../setup/factories.ts");
 const { DeckListResponse, DeckResponse, DeckDeleteResponse } = await import(
-  "../../src/utils/responseSchema.js"
+  "../../src/utils/responseSchema.ts"
 );
 
 // consider if subscriptionType should be a union type or enum instead of string

@@ -2,7 +2,7 @@ import * as dotenv from "dotenv";
 dotenv.config({ path: ".env.test" });
 
 const request = (await import("supertest")).default;
-const { app } = await import("../setup/testApp.js");
+const { app } = await import("../setup/testApp.ts");
 
 describe("Security middleware headers", () => {
   it("applies CORS and Helmet to authentication preflight requests", async () => {

@@ -3,7 +3,7 @@ dotenv.config({ path: ".env.test" });
 
 import { jest } from "@jest/globals";
 
-jest.unstable_mockModule("../../src/lib/auth.js", () => ({
+jest.unstable_mockModule("../../src/lib/auth.ts", () => ({
   auth: {
     api: {
       getSession: jest.fn(() =>
@@ -22,10 +22,10 @@ jest.unstable_mockModule("../../src/lib/auth.js", () => ({
 }));
 
 const request = (await import("supertest")).default;
-const { createApp } = await import("../../src/app.js");
-const { createLogger } = await import("../../src/lib/logger.js");
+const { createApp } = await import("../../src/app.ts");
+const { createLogger } = await import("../../src/lib/logger.ts");
 const { default: prisma, disconnectPrisma } = await import(
-  "../../src/lib/prisma.js"
+  "../../src/lib/prisma.ts"
 );
 
 const output: string[] = [];

@@ -2,7 +2,7 @@ import { jest } from "@jest/globals";
 import type { NextFunction, Request, Response } from "express";
 
 import { requireOwnership } from "../../src/middlewares/requireOwnership.ts";
-import { ForbiddenError, UnauthorizedError } from "../../src/utils/appError.js";
+import { ForbiddenError, UnauthorizedError } from "../../src/utils/appError.ts";
 
 describe("requireOwnership", () => {
   it("throws UnauthorizedError when req.user is missing", () => {

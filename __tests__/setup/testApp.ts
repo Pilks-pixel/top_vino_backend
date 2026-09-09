@@ -4,8 +4,8 @@
  * Importing directly from src/app.ts ensures integration tests
  * exercise the full middleware stack (CORS, validation, error handler).
  */
-import app from "../../src/app.js";
-import { disconnectPrisma } from "../../src/lib/prisma.js";
+import app from "../../src/app.ts";
+import { disconnectPrisma } from "../../src/lib/prisma.ts";
 
 afterAll(async () => {
   await disconnectPrisma();

@@ -2,8 +2,8 @@ import * as dotenv from "dotenv";
 dotenv.config({ path: ".env.test" });
 
 const request = (await import("supertest")).default;
-const { app } = await import("../setup/testApp.js");
-const { disconnectDb } = await import("../setup/testDb.js");
+const { app } = await import("../setup/testApp.ts");
+const { disconnectDb } = await import("../setup/testDb.ts");
 
 afterAll(async () => disconnectDb());
 

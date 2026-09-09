@@ -1,4 +1,3 @@
-import type { Requestor } from "./deckAccess.service.ts";
 import { loadDeck, visibleDeckScope } from "./deckAccess.service.ts";
 import {
   getDecksByScope,
@@ -6,9 +5,9 @@ import {
   updateDeckByID,
   deleteDeckByID,
 } from "../model/deckModel.ts";
-import type { CreateDeckInput, UpdateDeckInput } from "../utils/deckSchema.ts";
-
-type CreateDeckData = CreateDeckInput & { userId: string };
+import type { CreateDeckData } from "../types/deck.ts";
+import type { Requestor } from "../types/requestor.ts";
+import type { UpdateDeckInput } from "../utils/deckSchema.ts";
 
 export async function listDecksForUser(
   requestor: Requestor,

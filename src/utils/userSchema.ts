@@ -11,27 +11,27 @@ export const UserIdSchema = z
  * The single definition of subscription tier. Every FREE/PRO union in the
  * codebase derives from this enum via z.infer — never restate the literals.
  */
-export const SubscriptionTier = z
+export const SubscriptionTierSchema = z
   .enum(["FREE", "PRO"])
   .meta({ id: "SubscriptionTier" });
 
-export type SubscriptionTier = z.infer<typeof SubscriptionTier>;
+export type SubscriptionTier = z.infer<typeof SubscriptionTierSchema>;
 
-export const UserProfile = z
+export const UserProfileSchema = z
   .strictObject({
     id: UserIdSchema,
     email: z.email(),
     name: z.string().nullable(),
-    subscriptionType: SubscriptionTier,
+    subscriptionType: SubscriptionTierSchema,
   })
   .meta({ id: "UserProfile" });
 
-export type UserProfile = z.infer<typeof UserProfile>;
+export type UserProfile = z.infer<typeof UserProfileSchema>;
 
-export const UserUpdate = z
+export const UserUpdateSchema = z
   .strictObject({
     name: z.string(),
   })
   .meta({ id: "UserUpdate" });
 
-export type UserUpdate = z.infer<typeof UserUpdate>;
+export type UserUpdate = z.infer<typeof UserUpdateSchema>;

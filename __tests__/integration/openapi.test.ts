@@ -3,21 +3,21 @@ import { Validator } from "@seriousme/openapi-schema-validator";
 dotenv.config({ path: ".env.test" });
 
 const request = (await import("supertest")).default;
-const { app } = await import("../setup/testApp.js");
+const { app } = await import("../setup/testApp.ts");
 const { default: userRouter } = await import(
-  "../../src/routes/user/user.router.js"
+  "../../src/routes/user/user.router.ts"
 );
 const { default: deckRouter } = await import(
-  "../../src/routes/deck/deck.router.js"
+  "../../src/routes/deck/deck.router.ts"
 );
 const { default: cardRouter } = await import(
-  "../../src/routes/card/card.router.js"
+  "../../src/routes/card/card.router.ts"
 );
 const { default: reviewRouter } = await import(
-  "../../src/routes/review/review.router.js"
+  "../../src/routes/review/review.router.ts"
 );
 const { OpenApiDocumentResponse } = await import(
-  "../../src/utils/responseSchema.js"
+  "../../src/utils/responseSchema.ts"
 );
 
 type RouteLayer = {

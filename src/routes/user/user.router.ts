@@ -7,7 +7,7 @@ import {
   httpGetCurrentUser,
 } from "./user.controller.ts";
 
-import { UserUpdate } from "../../utils/userSchema.ts";
+import { UserUpdateSchema } from "../../utils/userSchema.ts";
 import { authMiddleware } from "../../middlewares/authMiddleware.ts";
 import { requireOwnership } from "../../middlewares/requireOwnership.ts";
 import validationMiddleware from "../../middlewares/validationMiddleware.ts";
@@ -27,7 +27,7 @@ userRouter.put(
   authMiddleware,
   validationMiddleware(UserIdParamsSchema, "params"),
   requireOwnership(req => req.params.id),
-  validationMiddleware(UserUpdate),
+  validationMiddleware(UserUpdateSchema),
   httpUpdateUser,
 );
 userRouter.delete(
