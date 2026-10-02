@@ -14,6 +14,18 @@ _Avoid_: set, collection, pack
 A single prompt and its answer, belonging to exactly one deck. A card has no owner of its own — it takes its owner from its deck.
 _Avoid_: flashcard, item, question
 
+**Card Revision**:
+An immutable version of a card's study content and grading rubric. Answer submissions retain the card revision they were shown even after the card changes.
+_Avoid_: card version, card snapshot
+
+**Card Draft**:
+A proposed card that has not joined a deck's study content. Accepting a card draft creates a card; rejecting it leaves the deck unchanged.
+_Avoid_: generated card, candidate card
+
+**Study Source**:
+A versioned body of learning material owned by one user and explicitly attached to each deck that may use it. A study source can be reused across decks without duplicating it.
+_Avoid_: learning material, upload, document
+
 **Public Deck**:
 A deck its owner has opened to every authenticated user for reading and studying. Public never confers the ability to change a deck or its cards.
 _Avoid_: shared deck, open deck
@@ -49,6 +61,18 @@ _Avoid_: plan, membership, subscription level
 **Review**:
 One graded attempt at a card, recorded with the quality of recall the requestor reported.
 _Avoid_: attempt, answer, session
+
+**Answer Submission**:
+The response a requestor provides for an open-ended card revision before deciding the recall quality recorded by a review.
+_Avoid_: user response, answer, attempt
+
+**Grade Recommendation**:
+An advisory assessment of an answer submission. A requestor may confirm or override it, but it never changes progress on its own.
+_Avoid_: AI grade, automatic grade, score
+
+**Grading Rubric**:
+The versioned criteria for assessing an answer to an open-ended card. A reference answer may inform the rubric but does not replace it.
+_Avoid_: grading criteria, answer key, grading prompt
 
 **Progress**:
 A requestor's scheduling state for a single card — how well they know it and when they should next see it. Progress belongs to the requestor, not to the deck's owner, so studying another user's public deck builds progress of your own.
