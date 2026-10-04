@@ -1,4 +1,6 @@
 import * as z from "zod/v4";
+import { getCookies } from "better-auth/cookies";
+import { sandboxWarning } from "./config/publicDocumentation.ts";
 
 import "./middlewares/errorHandler.ts";
 import "./utils/cardSchema.ts";
@@ -45,7 +47,7 @@ type RouteMetadata = {
   successStatus?: number;
   successDescription: string;
   responseSchema: string;
-  responseContentType?: "application/json" | "text/html";
+  responseContentType?: "application/json" | "text/html" | "text/plain";
   requestSchema?: string;
   parameters?: ParameterObject[];
   errorStatuses?: number[];
@@ -67,7 +69,7 @@ export type OpenApiDocument = {
       sessionCookie: {
         type: "apiKey";
         in: "cookie";
-        name: "better-auth.session_token";
+        name: string;
         description: string;
       };
     };
@@ -111,7 +113,10 @@ const errorDescriptions: Record<number, string> = {
 function response(
   description: string,
   schemaId: string,
-  contentType: "application/json" | "text/html" = "application/json",
+  contentType:
+    | "application/json"
+    | "text/html"
+    | "text/plain" = "application/json",
 ): ResponseObject {
   return {
     description,
@@ -137,9 +142,31 @@ const resourceErrors = [400, 403, 404, ...authenticatedErrors];
 const routes: RouteMetadata[] = [
   {
     method: "get",
+    path: "/docs",
+    operationId: "getApiReference",
+    summary: "Browse live product routes and authentication capabilities",
+    tag: "System",
+    successDescription: "API reference with disposable sandbox notice",
+    responseSchema: "ApiReferenceResponse",
+    responseContentType: "text/html",
+    errorStatuses: [429],
+  },
+  {
+    method: "get",
+    path: "/robots.txt",
+    operationId: "getRobotsGuidance",
+    summary: "Discourage indexing of the sandbox",
+    tag: "System",
+    successDescription: "Crawlers are asked not to index any sandbox path",
+    responseSchema: "RobotsResponse",
+    responseContentType: "text/plain",
+    errorStatuses: [429],
+  },
+  {
+    method: "get",
     path: "/",
     operationId: "getRoot",
-    summary: "Return the API greeting",
+    summary: "Identify the API sandbox and link to its reference",
     tag: "System",
     successDescription: "API is reachable",
     responseSchema: "RootResponse",
@@ -172,6 +199,7 @@ const routes: RouteMetadata[] = [
     tag: "System",
     successDescription: "OpenAPI 3.1 document",
     responseSchema: "OpenApiDocumentResponse",
+    errorStatuses: [429],
   },
   {
     method: "get",
@@ -453,8 +481,7 @@ export function generateOpenApiDocument(): OpenApiDocument {
     info: {
       title: "Top Vino API",
       version: "1.0.0",
-      description:
-        "API for building decks, studying cards, and tracking spaced-repetition progress. Requests sent through the interactive API reference are real and persist in the configured development database.",
+      description: `Live product routes for building decks, studying cards, and tracking spaced-repetition progress. Requests sent through the interactive API reference are real and persist in the connected database. ${sandboxWarning}`,
     },
     paths: buildPaths(),
     components: {
@@ -463,7 +490,8 @@ export function generateOpenApiDocument(): OpenApiDocument {
         sessionCookie: {
           type: "apiKey",
           in: "cookie",
-          name: "better-auth.session_token",
+          name: getCookies({ baseURL: process.env.BETTER_AUTH_URL })
+            .sessionToken.name,
           description: "Better Auth session cookie",
         },
       },

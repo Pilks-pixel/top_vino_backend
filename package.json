@@ -86,7 +86,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",
-    "@scalar/express-api-reference": "^0.10.17",
+    "@scalar/client-side-rendering": "0.3.10",
     "better-auth": "^1.6.23",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",

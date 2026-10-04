@@ -164,8 +164,16 @@ export const UserDeleteResponse = SuccessMessageResponse.meta({
 });
 
 export const RootResponse = z
-  .literal("Hello World!")
+  .string()
+  .describe(
+    "Minimal API identity, documentation link, and disposable sandbox notice",
+  )
   .meta({ id: "RootResponse" });
+
+export const ApiReferenceResponse = z
+  .string()
+  .meta({ id: "ApiReferenceResponse" });
+export const RobotsResponse = z.string().meta({ id: "RobotsResponse" });
 
 export const HealthResponse = z
   .strictObject({

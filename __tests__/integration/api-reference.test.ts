@@ -39,7 +39,7 @@ describe("Scalar API reference", () => {
     expect(response.text).toContain("Scalar");
   });
 
-  it("offers Top Vino and Authentication sources in development", async () => {
+  it("offers Top Vino and authentication capability sources in development", async () => {
     process.env.NODE_ENV = "development";
 
     const response = await request(createApp()).get("/docs");
@@ -52,7 +52,7 @@ describe("Scalar API reference", () => {
       default: true,
     });
     expect(sources).toContainEqual({
-      title: "Authentication",
+      title: "Authentication capabilities",
       slug: "authentication",
       url: "/api/auth/open-api/generate-schema",
     });
@@ -86,11 +86,13 @@ describe("Scalar API reference", () => {
     expect(response.text).toContain('"persistAuth": false');
   });
 
-  it("is not mounted in production", async () => {
+  it("is browsable at /docs in production", async () => {
     process.env.NODE_ENV = "production";
 
     const response = await request(createApp()).get("/docs");
 
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(200);
+    expect(response.type).toBe("text/html");
+    expect(response.text).toContain("Scalar");
   });
 });

@@ -36,6 +36,8 @@ The final image runs `node dist/server.js` directly as PID 1 under the `node` us
 
 `GET /health` is unauthenticated liveness and does no database I/O. Docker probes it every 30 seconds, with a five-second timeout, ten-second start period and three retries. `GET /ready` returns 200 after `SELECT 1` succeeds or 503 when PostgreSQL is unavailable. Both bypass request limits. The API can boot with an unavailable database; readiness prevents it from being considered ready for traffic.
 
-SIGTERM or SIGINT stops accepting connections, finishes in-flight HTTP work, disconnects Prisma, and exits 0. Additional signals cannot start another shutdown. Close/disconnect failure or the ten-second deadline exits 1. Platform deployment, production migrations, CI protection, public documentation/authentication staging, and the Render trust rule remain separate child issues under #41.
+SIGTERM or SIGINT stops accepting connections, finishes in-flight HTTP work, disconnects Prisma, and exits 0. Additional signals cannot start another shutdown. Close/disconnect failure or the ten-second deadline exits 1.
+
+Public root identity, `/docs`, both schemas, and `/robots.txt` follow the [sandbox documentation contract](./api-reference.md) from #43. Documentation and schemas use their own 60-per-minute quota and prominently warn about disposable data. Platform deployment, production migrations, CI protection, authentication staging, and the Render trust rule remain separate child issues under #41.
 
 The development Compose API uses the build stage and development environment, retaining its source mounts and development dependencies.

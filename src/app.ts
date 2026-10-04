@@ -1,11 +1,11 @@
 import express from "express";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import cors from "cors";
 import { pinoHttp } from "pino-http";
 import helmet from "helmet";
 import { toNodeHandler } from "better-auth/node";
-import { apiReference } from "@scalar/express-api-reference";
+import { renderApiReference } from "@scalar/client-side-rendering";
 
 import { auth } from "./lib/auth.ts";
 import { logger, serializeRequest, serializeResponse } from "./lib/logger.ts";
@@ -15,8 +15,14 @@ import deckRouter from "./routes/deck/deck.router.ts";
 import cardRouter from "./routes/card/card.router.ts";
 import reviewRouter from "./routes/review/review.router.ts";
 import { createErrorHandler } from "./middlewares/errorHandler.ts";
-import { authLimiter, generalLimiter } from "./config/rateLimits.ts";
+import { createRateLimiters } from "./config/rateLimits.ts";
 import { openApiDocument } from "./openapi.ts";
+import {
+  authCapabilityWarning,
+  rootPage,
+  sandboxNotice,
+  sandboxWarning,
+} from "./config/publicDocumentation.ts";
 
 const REQUEST_ID_HEADER = "x-request-id";
 const MAX_REQUEST_ID_LENGTH = 128;
@@ -54,6 +60,8 @@ function generateRequestId(req: IncomingMessage, res: ServerResponse): string {
 
 export function createApp(applicationLogger = logger) {
   const app = express();
+  const { authLimiter, generalLimiter, documentationLimiter } =
+    createRateLimiters();
 
   // Automatic request logging: every response is logged through pino-http
   // with the serialized safe request metadata. Log level follows the status
@@ -77,36 +85,89 @@ export function createApp(applicationLogger = logger) {
       },
     }),
   );
-  if (process.env.NODE_ENV === "development") {
-    app.get(
-      "/docs",
-      apiReference({
-        pageTitle: "Top Vino API Reference",
-        sources: [
-          {
-            title: "Top Vino API",
-            slug: "top-vino",
-            url: "/openapi.json",
-            default: true,
-          },
-          {
-            title: "Authentication",
-            slug: "authentication",
-            url: "/api/auth/open-api/generate-schema",
-          },
-        ],
-        persistAuth: false,
-        customFetch: (input, init) =>
-          window.fetch(input, { ...init, credentials: "include" }),
-      }),
-    );
-  }
   app.use(helmet());
   app.use(
     cors({
       origin: process.env.FRONTEND_URL ?? "http://localhost:3000",
       credentials: true,
     }),
+  );
+  app.use((_req, res, next) => {
+    res.setHeader("X-Robots-Tag", "noindex, nofollow");
+    next();
+  });
+  app.use("/api/auth", (req, res, next) => {
+    res.once("finish", () => {
+      if (res.statusCode < 400) return;
+
+      const failureMetadata = {
+        event: "authentication_failure",
+        route: req.originalUrl.split("?", 1)[0],
+        statusCode: res.statusCode,
+        requestId: req.id,
+      };
+      const requestLogger = req.log ?? applicationLogger;
+
+      if (res.statusCode >= 500) {
+        requestLogger.error(failureMetadata, "Authentication request failed");
+      } else {
+        requestLogger.warn(failureMetadata, "Authentication request failed");
+      }
+    });
+
+    next();
+  });
+  app.use(
+    [
+      "/docs",
+      "/openapi.json",
+      "/api/auth/open-api/generate-schema",
+      "/robots.txt",
+    ],
+    documentationLimiter,
+  );
+  app.get(
+    "/docs",
+    (req, res, next) => {
+      res.locals.cspNonce = randomBytes(16).toString("base64");
+      helmet.contentSecurityPolicy({
+        directives: {
+          scriptSrc: [
+            "'self'",
+            `'nonce-${res.locals.cspNonce}'`,
+            "https://cdn.jsdelivr.net",
+          ],
+          connectSrc: ["'self'"],
+        },
+      })(req, res, next);
+    },
+    (_req, res) => {
+      const html = renderApiReference({
+        pageTitle: "Top Vino API Reference",
+        nonce: res.locals.cspNonce as string,
+        config: {
+          sources: [
+            {
+              title: "Top Vino API",
+              slug: "top-vino",
+              url: "/openapi.json",
+              default: true,
+            },
+            {
+              title: "Authentication capabilities",
+              slug: "authentication",
+              url: "/api/auth/open-api/generate-schema",
+            },
+          ],
+          persistAuth: false,
+          telemetry: false,
+          proxyUrl: "",
+          customFetch: (input, init) =>
+            window.fetch(input, { ...init, credentials: "include" }),
+        },
+      });
+      res.type("html").send(html.replace("<body>", `<body>${sandboxNotice}`));
+    },
   );
   app.get("/health", (_req, res) => {
     res.json({
@@ -138,38 +199,32 @@ export function createApp(applicationLogger = logger) {
     }
   });
 
-  app.use("/api/auth", (req, res, next) => {
-    res.once("finish", () => {
-      if (res.statusCode < 400) return;
-
-      const failureMetadata = {
-        event: "authentication_failure",
-        route: req.originalUrl.split("?", 1)[0],
-        statusCode: res.statusCode,
-        requestId: req.id,
-      };
-      const requestLogger = req.log ?? applicationLogger;
-
-      if (res.statusCode >= 500) {
-        requestLogger.error(failureMetadata, "Authentication request failed");
-      } else {
-        requestLogger.warn(failureMetadata, "Authentication request failed");
-      }
+  app.get("/api/auth/open-api/generate-schema", async (_req, res) => {
+    const schema = await auth.api.generateOpenAPISchema();
+    res.json({
+      ...schema,
+      info: {
+        ...schema.info,
+        title: "Better Auth capability reference",
+        description: `${authCapabilityWarning} ${sandboxWarning}`,
+      },
     });
+  });
 
-    next();
+  app.get("/robots.txt", (_req, res) => {
+    res.type("text").send("User-agent: *\nDisallow: /\n");
+  });
+
+  app.get("/openapi.json", (_req, res) => {
+    res.json(openApiDocument);
   });
   app.use("/api/auth", authLimiter);
   app.all("/api/auth/{*any}", toNodeHandler(auth));
   app.use(express.json({ limit: "10kb" }));
   app.use(generalLimiter);
 
-  app.get("/openapi.json", (_req, res) => {
-    res.json(openApiDocument);
-  });
-
   app.get("/", async (_req, res) => {
-    res.send("Hello World!");
+    res.type("html").send(rootPage);
   });
 
   app.use("/user", userRouter);
