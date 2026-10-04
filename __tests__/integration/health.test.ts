@@ -8,6 +8,12 @@ const { disconnectDb } = await import("../setup/testDb.ts");
 afterAll(async () => disconnectDb());
 
 describe("GET /health", () => {
+  it("keeps platform probes available after the product request quota is exhausted", async () => {
+    for (let i = 0; i < 101; i++) await request(app).get("/");
+    expect((await request(app).get("/")).status).toBe(429);
+    expect((await request(app).get("/health")).status).toBe(200);
+    expect((await request(app).get("/ready")).status).toBe(200);
+  });
   it("returns 200 with status ok", async () => {
     const res = await request(app).get("/health");
     expect(res.status).toBe(200);

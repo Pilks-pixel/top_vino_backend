@@ -1,28 +1,38 @@
 import { createServer } from "node:http";
 import dotenv from "dotenv";
-dotenv.config();
+import pino from "pino";
+if (process.env.NODE_ENV !== "production") dotenv.config();
 
 import { validateEnv } from "./utils/env.ts";
-import { logger } from "./lib/logger.ts";
-import prisma from "./lib/prisma.ts";
-import app from "./app.ts";
+import { createLogger } from "./lib/loggerCore.ts";
+// No configured logger, database or auth module may load before validation.
+const { port } = (() => {
+  try {
+    return validateEnv();
+  } catch (error) {
+    const startupLogger = createLogger({
+      environment: "production",
+      logLevel: "error",
+      destination: pino.destination({ dest: 1, sync: true }),
+    });
+    startupLogger.error(
+      {
+        event: "startup_failure",
+        reason: "environment_validation",
+        errorType:
+          error instanceof Error ? error.constructor.name : "UnknownError",
+        message: error instanceof Error ? error.message : "Invalid environment",
+      },
+      "Startup environment validation failed",
+    );
+    process.exit(1);
+  }
+})();
 
-try {
-  validateEnv();
-} catch (error) {
-  logger.error(
-    {
-      event: "startup_failure",
-      reason: "environment_validation",
-      errorType:
-        error instanceof Error ? error.constructor.name : "UnknownError",
-    },
-    "Startup environment validation failed",
-  );
-  throw error;
-}
+const { logger } = await import("./lib/logger.ts");
+const { default: prisma } = await import("./lib/prisma.ts");
+const { default: app } = await import("./app.ts");
 
-const port = process.env.PORT || 8000;
 const server = createServer(app);
 let shutdownStarted = false;
 
@@ -46,7 +56,6 @@ function shutdown(signal: string): void {
     );
     process.exit(1);
   }, 10_000);
-  hardExit.unref();
 
   server.close(async closeError => {
     if (closeError) {
@@ -65,6 +74,7 @@ function shutdown(signal: string): void {
     logger.info({ event: "http_server_closed", signal }, "HTTP server closed");
     try {
       await prisma.$disconnect();
+      clearTimeout(hardExit);
       logger.info(
         { event: "database_disconnected", signal },
         "Database disconnected",
@@ -98,7 +108,7 @@ function startServer(): void {
     process.exit(1);
   });
 
-  server.listen(port, () => {
+  server.listen(port, "0.0.0.0", () => {
     logger.info({ event: "server_started", port }, "Server started");
   });
 }

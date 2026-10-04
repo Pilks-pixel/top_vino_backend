@@ -108,6 +108,36 @@ export function createApp(applicationLogger = logger) {
       credentials: true,
     }),
   );
+  app.get("/health", (_req, res) => {
+    res.json({
+      status: "ok",
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  app.get("/ready", async (req, res) => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      res.json({ status: "ready" });
+    } catch (error) {
+      const requestLogger = req.log ?? applicationLogger;
+      requestLogger.warn(
+        {
+          event: "readiness_check_failure",
+          dependency: "database",
+          route: req.originalUrl.split("?", 1)[0],
+          statusCode: 503,
+          requestId: req.id,
+          errorType:
+            error instanceof Error ? error.constructor.name : "UnknownError",
+        },
+        "Readiness check failed",
+      );
+      res.status(503).json({ status: "unavailable" });
+    }
+  });
+
   app.use("/api/auth", (req, res, next) => {
     res.once("finish", () => {
       if (res.statusCode < 400) return;
@@ -140,36 +170,6 @@ export function createApp(applicationLogger = logger) {
 
   app.get("/", async (_req, res) => {
     res.send("Hello World!");
-  });
-
-  app.get("/health", (_req, res) => {
-    res.json({
-      status: "ok",
-      uptime: process.uptime(),
-      timestamp: new Date().toISOString(),
-    });
-  });
-
-  app.get("/ready", async (req, res) => {
-    try {
-      await prisma.$queryRaw`SELECT 1`;
-      res.json({ status: "ready" });
-    } catch (error) {
-      const requestLogger = req.log ?? applicationLogger;
-      requestLogger.warn(
-        {
-          event: "readiness_check_failure",
-          dependency: "database",
-          route: req.originalUrl.split("?", 1)[0],
-          statusCode: 503,
-          requestId: req.id,
-          errorType:
-            error instanceof Error ? error.constructor.name : "UnknownError",
-        },
-        "Readiness check failed",
-      );
-      res.status(503).json({ status: "unavailable" });
-    }
   });
 
   app.use("/user", userRouter);

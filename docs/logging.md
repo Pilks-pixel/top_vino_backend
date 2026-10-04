@@ -1,6 +1,6 @@
 # Logging
 
-The application logs through a single pino instance ([src/lib/logger.ts](../src/lib/logger.ts)). Every request handler, error path, and lifecycle event writes to it; nothing logs through `console`. The architectural rationale lives in ADR 0002 (`adr/0002-logging-contract.md`); this page describes the behavior.
+Each application process logs through one pino instance using the shared factory and redaction policy in [src/lib/loggerCore.ts](../src/lib/loggerCore.ts). Normal requests and lifecycle events use the instance exported by [src/lib/logger.ts](../src/lib/logger.ts); nothing logs through `console`. Startup validates configuration before loading that configured instance. A validation failure creates a synchronous error-level instance with the same factory, logs sanitized field names and error types, and exits without creating the normal instance. The architectural rationale lives in ADR 0002 (`adr/0002-logging-contract.md`); this page describes the behavior.
 
 ## Transport
 
@@ -22,7 +22,7 @@ Without `LOG_LEVEL`, the level follows `NODE_ENV`:
 
 ## Redaction
 
-Credential-bearing fields are redacted from every log record project-wide, replaced with `[Redacted]`. Redaction covers the sensitive field names at the top level, up to three levels of nesting, and inside arrays, plus the credential-bearing HTTP headers on serialized requests. The covered names include passwords, tokens, secrets, API keys, session material, and the `authorization`, `cookie`, `set-cookie`, `proxy-authorization`, and `x-api-key` header families. The full list is `DEFAULT_REDACT_PATHS` in [src/lib/logger.ts](../src/lib/logger.ts). Coverage is bounded by these enumerated paths: a credential stored under an unlisted field name, or nested deeper than the listed paths, is not redacted — new credential-bearing fields must be added to the list when they are introduced.
+Credential-bearing fields are redacted from every log record project-wide, replaced with `[Redacted]`. Redaction covers the sensitive field names at the top level, up to three levels of nesting, and inside arrays, plus the credential-bearing HTTP headers on serialized requests. The covered names include passwords, tokens, secrets, API keys, session material, and the `authorization`, `cookie`, `set-cookie`, `proxy-authorization`, and `x-api-key` header families. The full list is `DEFAULT_REDACT_PATHS` in [src/lib/loggerCore.ts](../src/lib/loggerCore.ts), re-exported from `logger.ts`. Coverage is bounded by these enumerated paths: a credential stored under an unlisted field name, or nested deeper than the listed paths, is not redacted — new credential-bearing fields must be added to the list when they are introduced.
 
 ## Automatic request logs
 

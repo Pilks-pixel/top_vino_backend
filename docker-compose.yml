@@ -1,4 +1,4 @@
-version: '3.9'
+version: "3.9"
 
 services:
   postgres:
@@ -14,16 +14,20 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   api:
-    build: .
+    build:
+      context: .
+      target: build
     command: npm run dev
     volumes:
       - .:/app
       - /app/node_modules
+      - /app/generated/prisma
     ports:
       - "8000:8000"
     depends_on:
       - postgres
     environment:
+      NODE_ENV: development
       DATABASE_URL: postgres://pete:hello_you@postgres:5432/top_vino_app
 
 volumes:

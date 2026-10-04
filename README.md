@@ -7,6 +7,7 @@ A spaced repetition learning/flashcard application backend built with Node.js, E
 - [Domain glossary](./docs/CONTEXT.md) — the ubiquitous language for decks, cards, access, and study
 - [Architecture decision records](./docs/adr/) — settled decisions; append-only
 - [Testing guide](./docs/TESTING.md) — how to run tests and how the test database setup works
+- [Production image](./docs/production-image.md) — pinned runtime, configuration, and container acceptance
 - [Logging contract](./docs/logging.md) — levels, redaction, correlation, failure events
 - [Agent docs](./docs/agents/) — issue tracker, triage labels, domain doc conventions
 
@@ -14,7 +15,8 @@ A spaced repetition learning/flashcard application backend built with Node.js, E
 
 ```bash
 # Install dependencies
-npm install
+nvm install && nvm use
+npm ci
 
 # Start development server with Docker
 docker-compose up
