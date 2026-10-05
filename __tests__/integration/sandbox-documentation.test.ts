@@ -4,11 +4,18 @@ import { jest } from "@jest/globals";
 const originalNodeEnv = process.env.NODE_ENV;
 const originalAuthUrl = process.env.BETTER_AUTH_URL;
 const originalLogLevel = process.env.LOG_LEVEL;
+const originalAuthSecret = process.env.BETTER_AUTH_SECRET;
+const originalAuthSecrets = process.env.BETTER_AUTH_SECRETS;
+process.env = { ...process.env };
 
 // Configure production HTTPS before authentication and schemas initialize.
 process.env.NODE_ENV = "production";
 process.env.BETTER_AUTH_URL = "https://api.example.test";
 process.env.LOG_LEVEL = "silent";
+process.env.BETTER_AUTH_SECRETS =
+  "1:synthetic-documentation-signing-secret-at-least-32-characters";
+process.env.BETTER_AUTH_SECRET = "";
+process.env.AUTH_SECRET = "";
 
 const { createApp } = await import("../../src/app.ts");
 const { createLogger } = await import("../../src/lib/logger.ts");
@@ -26,6 +33,10 @@ afterEach(() => {
 
 afterAll(async () => {
   process.env.BETTER_AUTH_URL = originalAuthUrl;
+  if (originalAuthSecret === undefined) delete process.env.BETTER_AUTH_SECRET;
+  else process.env.BETTER_AUTH_SECRET = originalAuthSecret;
+  if (originalAuthSecrets === undefined) delete process.env.BETTER_AUTH_SECRETS;
+  else process.env.BETTER_AUTH_SECRETS = originalAuthSecrets;
   if (originalLogLevel === undefined) delete process.env.LOG_LEVEL;
   else process.env.LOG_LEVEL = originalLogLevel;
   await disconnectPrisma();
@@ -217,7 +228,9 @@ describe("production sandbox documentation", () => {
         "no uptime or recovery promise",
       );
       expect(response.text).not.toContain(process.env.DATABASE_URL);
-      expect(response.text).not.toContain(process.env.BETTER_AUTH_SECRET);
+      expect(response.text).not.toContain(
+        process.env.BETTER_AUTH_SECRETS!.split(":")[1],
+      );
     }
     expect(product.body.paths["/deck"].get).toBeDefined();
     expect(product.body.paths["/user/me"].get).toBeDefined();
@@ -244,7 +257,9 @@ describe("production sandbox documentation", () => {
       expect(response.text).toContain("may sleep or reset");
       expect(response.text).toContain("no uptime or recovery promise");
       expect(response.text).not.toContain(process.env.DATABASE_URL);
-      expect(response.text).not.toContain(process.env.BETTER_AUTH_SECRET);
+      expect(response.text).not.toContain(
+        process.env.BETTER_AUTH_SECRETS!.split(":")[1],
+      );
     }
   });
 });

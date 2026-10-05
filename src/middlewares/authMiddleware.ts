@@ -1,4 +1,5 @@
 import { fromNodeHeaders } from "better-auth/node";
+import { isAPIError } from "better-auth/api";
 import { auth } from "../lib/auth.ts";
 import { catchAsync } from "../utils/catchAsync.ts";
 import { UnauthorizedError } from "../utils/appError.ts";
@@ -11,9 +12,16 @@ type SessionUser = {
 };
 
 export const authMiddleware = catchAsync(async (req, _res, next) => {
-  const session = await auth.api.getSession({
-    headers: fromNodeHeaders(req.headers),
-  });
+  const session = await auth.api
+    .getSession({
+      headers: fromNodeHeaders(req.headers),
+    })
+    .catch(error => {
+      if (isAPIError(error) && error.statusCode === 401) {
+        throw new UnauthorizedError("Not authenticated");
+      }
+      throw error;
+    });
 
   if (!session) {
     throw new UnauthorizedError("Not authenticated");

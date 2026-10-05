@@ -54,6 +54,8 @@ document's description states this as well.
 
 The following fixture and operator commands are for local development only.
 The public sandbox uses private credentials provisioned for each tester.
+See [synthetic tester access](./synthetic-testers.md) for the operator command,
+onboarding and session management, revocation, and secret rotation.
 
 `docs:seed` creates a deterministic, sign-in-ready fixture:
 

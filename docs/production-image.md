@@ -10,7 +10,7 @@ Build the release architecture from a clean checkout:
 npm run test:container
 ```
 
-Only Docker and Node are needed to run this acceptance command; it needs no local npm install or database. It builds Linux AMD64 (emulated on Apple Silicon), creates an isolated PostgreSQL 15 container and test network, migrates the temporary database using the build stage, and provisions a synthetic tester through Better Auth's server API. It verifies image contents, non-root execution, the configured port on all interfaces, read-only filesystem operation, offline startup, sanitized configuration failure, liveness/readiness during database loss, an authenticated Prisma-backed User Profile read, and both termination signals. Fault injection at HTTP/database boundaries also checks repeated signals, close/disconnect failures, and the ten-second deadline. Owned containers, images and the network are removed even on failure; build cache is retained. It never uses workstation environment files or production credentials.
+Only Docker and Node are needed to run this acceptance command; it needs no local npm install or database. It builds Linux AMD64 (emulated on Apple Silicon), creates an isolated PostgreSQL 15 container and test network, migrates the temporary database using the build stage, and provisions a hashed synthetic tester fixture outside runtime HTTP. It verifies image contents, non-root execution, the configured port on all interfaces, read-only filesystem operation, offline startup, sanitized configuration failure, liveness/readiness during database loss, an authenticated Prisma-backed User Profile read, and both termination signals. Fault injection at HTTP/database boundaries also checks repeated signals, close/disconnect failures, and the ten-second deadline. Owned containers, images and the network are removed even on failure; build cache is retained. It never uses workstation environment files or production credentials.
 
 For a manual build:
 
@@ -23,12 +23,12 @@ Provide configuration only at runtime with `docker run --env-file` or your platf
 | Variable | Contract |
 | --- | --- |
 | `DATABASE_URL` | PostgreSQL URL with a hostname, database name and valid Prisma connection options; conflicting duplicate options are rejected. Point at an already migrated database. |
-| `BETTER_AUTH_SECRET` | At least 32 characters after trimming. |
+| `BETTER_AUTH_SECRETS` | Versioned secrets, current highest version first; each distinct value has at least 32 characters. Singular secrets are development-only. See [rotation](./synthetic-testers.md#versioned-signing-secrets). |
 | `BETTER_AUTH_URL` | HTTPS API origin, without credentials, query, fragment, or path. |
 | `FRONTEND_URL` | Explicit HTTPS browser origin, without credentials, query, fragment, or path. |
 | `PORT` | Decimal integer from 1 to 65535; the image sets 8000 by default. |
 | `LOG_LEVEL` | Optional validated pino level; defaults to info. |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional as a pair; omitting both leaves Google OAuth unconfigured. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional as a pair for local development. Production provider flows remain disabled regardless of these values. |
 
 Configuration is validated before application, authentication, database, and configured logger modules load. Startup failure logs contain field names and error types, never supplied values. Production does not load `.env` files. Proxy trust remains disabled; deployment-specific trust configuration is later work.
 
@@ -38,6 +38,6 @@ The final image runs `node dist/server.js` directly as PID 1 under the `node` us
 
 SIGTERM or SIGINT stops accepting connections, finishes in-flight HTTP work, disconnects Prisma, and exits 0. Additional signals cannot start another shutdown. Close/disconnect failure or the ten-second deadline exits 1.
 
-Public root identity, `/docs`, both schemas, and `/robots.txt` follow the [sandbox documentation contract](./api-reference.md) from #43. Documentation and schemas use their own 60-per-minute quota and prominently warn about disposable data. Platform deployment, production migrations, CI protection, authentication staging, and the Render trust rule remain separate child issues under #41.
+Public root identity, `/docs`, both schemas, and `/robots.txt` follow the [sandbox documentation contract](./api-reference.md) from #43. Documentation and schemas use their own 60-per-minute quota and prominently warn about disposable data. Platform deployment, production migrations, CI protection, browser protection, and the Render trust rule remain separate child issues under #41. The [synthetic tester contract](./synthetic-testers.md) from #44 enables only the initial authentication stage.
 
 The development Compose API uses the build stage and development environment, retaining its source mounts and development dependencies.

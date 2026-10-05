@@ -1,10 +1,7 @@
 import { isLogLevel } from "../lib/loggerCore.ts";
+import { authSecretOptions } from "../config/authSecrets.ts";
 
-const REQUIRED_ENV_VARS = [
-  "DATABASE_URL",
-  "BETTER_AUTH_SECRET",
-  "BETTER_AUTH_URL",
-] as const;
+const REQUIRED_ENV_VARS = ["DATABASE_URL", "BETTER_AUTH_URL"] as const;
 
 function invalid(name: string): never {
   throw new Error(`Invalid environment variable: ${name}`);
@@ -83,9 +80,16 @@ export function validateEnv(): { port: number } {
     invalid("NODE_ENV");
   }
   const production = environment === "production";
-  const requiredVars: readonly string[] = production
-    ? [...REQUIRED_ENV_VARS, "FRONTEND_URL", "PORT"]
-    : REQUIRED_ENV_VARS;
+  const secretVariable =
+    production || process.env.BETTER_AUTH_SECRETS !== undefined
+      ? "BETTER_AUTH_SECRETS"
+      : "BETTER_AUTH_SECRET";
+  const requiredVars: readonly string[] = [
+    REQUIRED_ENV_VARS[0],
+    secretVariable,
+    REQUIRED_ENV_VARS[1],
+    ...(production ? ["FRONTEND_URL", "PORT"] : []),
+  ];
   const missingVars = requiredVars.filter(varName => !process.env[varName]);
 
   if (missingVars.length > 0) {
@@ -110,9 +114,7 @@ export function validateEnv(): { port: number } {
     invalid("DATABASE_URL");
   }
   validateDatabaseOptions(database);
-  if (production && process.env.BETTER_AUTH_SECRET!.trim().length < 32) {
-    invalid("BETTER_AUTH_SECRET");
-  }
+  authSecretOptions();
   validateHttpUrl("BETTER_AUTH_URL", production);
   if (process.env.FRONTEND_URL !== undefined) {
     validateHttpUrl("FRONTEND_URL", production);

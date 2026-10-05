@@ -16,6 +16,7 @@ import cardRouter from "./routes/card/card.router.ts";
 import reviewRouter from "./routes/review/review.router.ts";
 import { createErrorHandler } from "./middlewares/errorHandler.ts";
 import { createRateLimiters } from "./config/rateLimits.ts";
+import { isSandboxAuthCapability } from "./config/authCapabilities.ts";
 import { openApiDocument } from "./openapi.ts";
 import {
   authCapabilityWarning,
@@ -60,6 +61,7 @@ function generateRequestId(req: IncomingMessage, res: ServerResponse): string {
 
 export function createApp(applicationLogger = logger) {
   const app = express();
+  const sandbox = process.env.NODE_ENV === "production";
   const { authLimiter, generalLimiter, documentationLimiter } =
     createRateLimiters();
 
@@ -219,6 +221,18 @@ export function createApp(applicationLogger = logger) {
     res.json(openApiDocument);
   });
   app.use("/api/auth", authLimiter);
+  app.use("/api/auth", (req, res, next) => {
+    if (sandbox && !isSandboxAuthCapability(req.method, req.path)) {
+      res.status(404).json({
+        success: false,
+        status: "error",
+        statusCode: 404,
+        message: "Authentication capability unavailable",
+      });
+      return;
+    }
+    next();
+  });
   app.all("/api/auth/{*any}", toNodeHandler(auth));
   app.use(express.json({ limit: "10kb" }));
   app.use(generalLimiter);
