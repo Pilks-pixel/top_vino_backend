@@ -31,7 +31,7 @@ describe("resolveLogLevel", () => {
 });
 
 describe("createLogger", () => {
-  it("redacts versioned signing secrets and temporary operator database credentials", () => {
+  it("redacts signing secrets, runtime and operator credentials, auth URLs and request bodies", () => {
     const output: string[] = [];
     const logger = createLogger({
       environment: "production",
@@ -45,7 +45,12 @@ describe("createLogger", () => {
     logger.info(
       {
         BETTER_AUTH_SECRETS: "private-versioned-signing-secrets",
+        DATABASE_URL: "private-runtime-database-url",
+        GOOGLE_CLIENT_SECRET: "private-provider-secret",
+        requestBody: { content: "private-request-content" },
+        callbackURL: "https://example.test/private-callback-token",
         operator: {
+          DIRECT_DATABASE_URL: "private-direct-database-url",
           SANDBOX_PROVISIONING_DATABASE_URL:
             "private-provisioning-database-url",
         },
@@ -55,7 +60,14 @@ describe("createLogger", () => {
     expect(output.join("")).not.toContain("private-");
     expect(JSON.parse(output[0])).toMatchObject({
       BETTER_AUTH_SECRETS: "[Redacted]",
-      operator: { SANDBOX_PROVISIONING_DATABASE_URL: "[Redacted]" },
+      DATABASE_URL: "[Redacted]",
+      GOOGLE_CLIENT_SECRET: "[Redacted]",
+      requestBody: "[Redacted]",
+      callbackURL: "[Redacted]",
+      operator: {
+        DIRECT_DATABASE_URL: "[Redacted]",
+        SANDBOX_PROVISIONING_DATABASE_URL: "[Redacted]",
+      },
     });
   });
   it("writes to an injected destination without changing the environment", () => {

@@ -1,10 +1,14 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { customSession, openAPI } from "better-auth/plugins";
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import { APIError, createAuthMiddleware, isAPIError } from "better-auth/api";
 import { makeSignature } from "better-auth/crypto";
 import prisma from "./prisma.ts";
 import { authSecretOptions } from "../config/authSecrets.ts";
+import {
+  AUTH_CLIENT_IP_HEADER,
+  reviewedBrowserOrigins,
+} from "../config/browserBoundary.ts";
 
 const signing = authSecretOptions();
 const sandbox = process.env.NODE_ENV === "production";
@@ -16,8 +20,29 @@ export const auth = betterAuth({
   // better-auth's own logger stays disabled: authentication failures are
   // reported through the app's protected request logger in app.ts.
   logger: { disabled: true },
+  onAPIError: {
+    onError: error => {
+      // better-call otherwise prints non-API errors directly to console,
+      // bypassing Better Auth's disabled logger and our redaction policy.
+      if (!isAPIError(error) || error.status === "INTERNAL_SERVER_ERROR") {
+        throw new APIError("INTERNAL_SERVER_ERROR", {
+          message: "Internal server error",
+          code: "INTERNAL_SERVER_ERROR",
+        });
+      }
+    },
+  },
   ...signing,
   baseURL: process.env.BETTER_AUTH_URL,
+  trustedOrigins: reviewedBrowserOrigins(),
+  advanced: {
+    ipAddress: { ipAddressHeaders: [AUTH_CLIENT_IP_HEADER] },
+    useSecureCookies: sandbox,
+    defaultCookieAttributes: { httpOnly: true, sameSite: "lax" },
+    crossSubDomainCookies: { enabled: false },
+    disableCSRFCheck: false,
+    disableOriginCheck: false,
+  },
   emailAndPassword: {
     enabled: true,
     disableSignUp: sandbox,

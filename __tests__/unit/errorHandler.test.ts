@@ -45,7 +45,7 @@ describe("errorHandler logging", () => {
     expect(errorLog).toMatchObject({
       level: 50,
       event: "application_failure",
-      route: "/unexpected",
+      route: "/[unmatched]",
       statusCode: 500,
       requestId,
     });

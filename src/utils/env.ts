@@ -1,5 +1,6 @@
 import { isLogLevel } from "../lib/loggerCore.ts";
 import { authSecretOptions } from "../config/authSecrets.ts";
+import { reviewedProxyTrust } from "../config/browserBoundary.ts";
 
 const REQUIRED_ENV_VARS = ["DATABASE_URL", "BETTER_AUTH_URL"] as const;
 
@@ -80,6 +81,12 @@ export function validateEnv(): { port: number } {
     invalid("NODE_ENV");
   }
   const production = environment === "production";
+  reviewedProxyTrust();
+  // Better Auth also reads this implicit variable for callback validation.
+  // Production browser permissions must come only from the reviewed origins.
+  if (production && process.env.BETTER_AUTH_TRUSTED_ORIGINS !== undefined) {
+    invalid("BETTER_AUTH_TRUSTED_ORIGINS");
+  }
   const secretVariable =
     production || process.env.BETTER_AUTH_SECRETS !== undefined
       ? "BETTER_AUTH_SECRETS"

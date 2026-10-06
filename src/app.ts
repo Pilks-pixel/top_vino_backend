@@ -9,6 +9,7 @@ import { renderApiReference } from "@scalar/client-side-rendering";
 
 import { auth } from "./lib/auth.ts";
 import { logger, serializeRequest, serializeResponse } from "./lib/logger.ts";
+import { safeRequestPath } from "./lib/loggerCore.ts";
 import prisma from "./lib/prisma.ts";
 import userRouter from "./routes/user/user.router.ts";
 import deckRouter from "./routes/deck/deck.router.ts";
@@ -16,6 +17,11 @@ import cardRouter from "./routes/card/card.router.ts";
 import reviewRouter from "./routes/review/review.router.ts";
 import { createErrorHandler } from "./middlewares/errorHandler.ts";
 import { createRateLimiters } from "./config/rateLimits.ts";
+import {
+  AUTH_CLIENT_IP_HEADER,
+  reviewedBrowserOrigins,
+  reviewedProxyTrust,
+} from "./config/browserBoundary.ts";
 import { isSandboxAuthCapability } from "./config/authCapabilities.ts";
 import { openApiDocument } from "./openapi.ts";
 import {
@@ -61,6 +67,7 @@ function generateRequestId(req: IncomingMessage, res: ServerResponse): string {
 
 export function createApp(applicationLogger = logger) {
   const app = express();
+  app.set("trust proxy", reviewedProxyTrust());
   const sandbox = process.env.NODE_ENV === "production";
   const { authLimiter, generalLimiter, documentationLimiter } =
     createRateLimiters();
@@ -84,13 +91,27 @@ export function createApp(applicationLogger = logger) {
       serializers: {
         req: serializeRequest,
         res: serializeResponse,
+        err: error => ({ type: error.type }),
       },
     }),
   );
   app.use(helmet());
+  app.use((req, _res, next) => {
+    // Overwrite even a client-supplied value. Both auth layers must use the
+    // socket/proxy decision made by Express, never independent raw headers.
+    req.headers[AUTH_CLIENT_IP_HEADER] = req.ip;
+    next();
+  });
+  const origins = reviewedBrowserOrigins();
+  app.use((_req, res, next) => {
+    res.vary("Origin");
+    next();
+  });
   app.use(
     cors({
-      origin: process.env.FRONTEND_URL ?? "http://localhost:3000",
+      origin: (origin, callback) => {
+        callback(null, Boolean(origin && origins.includes(origin)));
+      },
       credentials: true,
     }),
   );
@@ -104,7 +125,7 @@ export function createApp(applicationLogger = logger) {
 
       const failureMetadata = {
         event: "authentication_failure",
-        route: req.originalUrl.split("?", 1)[0],
+        route: safeRequestPath(req.originalUrl),
         statusCode: res.statusCode,
         requestId: req.id,
       };
@@ -189,7 +210,7 @@ export function createApp(applicationLogger = logger) {
         {
           event: "readiness_check_failure",
           dependency: "database",
-          route: req.originalUrl.split("?", 1)[0],
+          route: safeRequestPath(req.originalUrl),
           statusCode: 503,
           requestId: req.id,
           errorType:
@@ -233,9 +254,29 @@ export function createApp(applicationLogger = logger) {
     }
     next();
   });
-  app.all("/api/auth/{*any}", toNodeHandler(auth));
-  app.use(express.json({ limit: "10kb" }));
+  // Bound the decoded stream before Better Auth reads it. Keeping the raw
+  // text lets its handler retain JSON/form parsing and CSRF behavior.
+  app.use("/api/auth", express.text({ type: () => true, limit: "10kb" }));
+  app.all(
+    "/api/auth/{*any}",
+    toNodeHandler(async request => {
+      const response = await auth.handler(request);
+      // The locked Better Auth release emits X-Retry-After. Keep its sensitive
+      // route rules and expose the standard header used by clients/operators.
+      if (response.status === 429) {
+        const headers = new Headers(response.headers);
+        headers.set("Retry-After", headers.get("X-Retry-After") ?? "10");
+        return new Response(response.body, {
+          status: response.status,
+          headers,
+        });
+      }
+      return response;
+    }),
+  );
   app.use(generalLimiter);
+  app.use(express.json({ limit: "10kb" }));
+  app.use(express.text({ type: () => true, limit: "10kb" }));
 
   app.get("/", async (_req, res) => {
     res.type("html").send(rootPage);
@@ -245,6 +286,14 @@ export function createApp(applicationLogger = logger) {
   app.use("/deck", deckRouter);
   app.use("/deck/:deckId/cards", cardRouter);
   app.use("/review", reviewRouter);
+  app.use((_req, res) => {
+    res.status(404).json({
+      success: false,
+      status: "error",
+      statusCode: 404,
+      message: "Route unavailable",
+    });
+  });
   app.use(createErrorHandler(applicationLogger));
 
   return app;

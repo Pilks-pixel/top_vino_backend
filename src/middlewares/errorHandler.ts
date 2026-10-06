@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { z } from "zod/v4";
 import { logger } from "../lib/logger.ts";
+import { safeRequestPath } from "../lib/loggerCore.ts";
 import { AppError, ValidationError } from "../utils/appError.ts";
 import {
   getPrismaErrorLogMetadata,
@@ -63,13 +64,8 @@ type ErrorResponse = z.infer<typeof errorResponseSchema>;
 /**
  * Determines if we're in development environment
  */
-const isDevelopment = process.env.NODE_ENV !== "production";
-
-function safeStack(error: Error): string | undefined {
-  if (!error.stack) return undefined;
-
-  const stackLines = error.stack.split("\n").slice(1);
-  return stackLines.length > 0 ? stackLines.join("\n") : undefined;
+function isDevelopment(): boolean {
+  return process.env.NODE_ENV !== "production";
 }
 
 function logError(
@@ -90,7 +86,7 @@ function logError(
         : isOperational
           ? "request_failure"
           : "application_failure",
-    route: req.originalUrl.split("?", 1)[0],
+    route: safeRequestPath(req.originalUrl),
     statusCode: error.status,
     requestId: req.id,
     errorType: originalError.constructor.name,
@@ -118,11 +114,7 @@ function logError(
   if (isOperational) {
     requestLogger.warn(metadata, error.message);
   } else {
-    const stack = safeStack(error);
-    requestLogger.error(
-      stack ? { ...metadata, stack } : metadata,
-      "Unhandled error",
-    );
+    requestLogger.error(metadata, "Unhandled error");
   }
 }
 
@@ -176,7 +168,11 @@ function handleError(
   let error: AppError;
 
   // Handle Prisma errors
-  if (isPrismaError(err)) {
+  if ("type" in err && err.type === "entity.too.large") {
+    error = new AppError("Request body too large", 413);
+  } else if ("type" in err && err.type === "entity.parse.failed") {
+    error = new AppError("Invalid request body", 400);
+  } else if (isPrismaError(err)) {
     error = handlePrismaError(err);
   }
   // Handle Prisma validation errors
@@ -191,7 +187,7 @@ function handleError(
   // Handle unknown errors
   else {
     error = new AppError(
-      isDevelopment ? err.message : "Internal server error",
+      isDevelopment() ? err.message : "Internal server error",
       500,
     );
     error.isOperational = false;
@@ -202,7 +198,7 @@ function handleError(
   logError(error, error.isOperational, req.log ?? applicationLogger, req, err);
 
   // Send response
-  const response = createErrorResponse(error, isDevelopment);
+  const response = createErrorResponse(error, isDevelopment());
   res.status(response.statusCode).json(response);
 }
 

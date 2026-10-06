@@ -7,7 +7,18 @@ const REDACTED_VALUE = "[Redacted]";
 const SENSITIVE_FIELD_NAMES = [
   "BETTER_AUTH_SECRET",
   "BETTER_AUTH_SECRETS",
+  "DATABASE_URL",
+  "DIRECT_DATABASE_URL",
+  "GOOGLE_CLIENT_SECRET",
   "SANDBOX_PROVISIONING_DATABASE_URL",
+  "body",
+  "requestBody",
+  "databaseUrl",
+  "directDatabaseUrl",
+  "callbackURL",
+  "errorCallbackURL",
+  "newUserCallbackURL",
+  "redirectTo",
   "accessKey",
   "accesskey",
   "accessToken",
@@ -115,11 +126,59 @@ export function serializeRequest(
   return {
     id: request.id,
     method: request.method,
-    url: request.url.split("?", 1)[0],
-    headers: request.headers,
+    url: safeRequestPath(request.url),
+    // Unknown headers, Origin and Referer may contain credentials or URLs.
+    // Retain only the transport metadata needed to investigate a request.
+    headers: {
+      host: request.headers.host,
+      "content-type": request.headers["content-type"],
+      "content-length": request.headers["content-length"],
+    },
     remoteAddress: request.remoteAddress,
     remotePort: request.remotePort,
   };
+}
+
+/** Log route shapes, never arbitrary paths or token-bearing path parameters. */
+export function safeRequestPath(url: string): string {
+  const path = url.split("?", 1)[0];
+  const publicPaths = [
+    "/",
+    "/health",
+    "/ready",
+    "/docs",
+    "/robots.txt",
+    "/openapi.json",
+  ];
+  if (publicPaths.includes(path)) return path;
+  if (path.startsWith("/api/auth/")) {
+    const known = [
+      "/sign-in/email",
+      "/sign-up/email",
+      "/sign-out",
+      "/get-session",
+      "/list-sessions",
+      "/change-password",
+      "/revoke-session",
+      "/revoke-sessions",
+      "/revoke-other-sessions",
+      "/open-api/generate-schema",
+    ];
+    return known.includes(path.slice("/api/auth".length))
+      ? path
+      : "/api/auth/[unavailable]";
+  }
+  if (/^\/user\/?$/.test(path) || path === "/user/me") return path;
+  if (/^\/user\/[^/]+\/?$/.test(path)) return "/user/:userId";
+  if (/^\/deck\/?$/.test(path)) return path;
+  if (/^\/deck\/[^/]+\/?$/.test(path)) return "/deck/:deckId";
+  if (/^\/deck\/[^/]+\/cards\/?$/.test(path)) return "/deck/:deckId/cards";
+  if (/^\/deck\/[^/]+\/cards\/[^/]+\/?$/.test(path))
+    return "/deck/:deckId/cards/:cardId";
+  if (/^\/review\/?$/.test(path) || path === "/review/due") return path;
+  if (/^\/review\/progress\/[^/]+\/?$/.test(path))
+    return "/review/progress/:cardId";
+  return "/[unmatched]";
 }
 
 export function serializeResponse(
