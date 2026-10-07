@@ -1,5 +1,5 @@
 export const sandboxWarning =
-  "This sandbox uses synthetic disposable data, may sleep or reset, and has no uptime or recovery promise. Do not enter personal or irreplaceable information.";
+  "This sandbox uses synthetic disposable data, may sleep or reset, and has no uptime or recovery promise. Do not enter personal or irreplaceable information. Known testers receive 72 hours of notice before a planned reset and notice by the next business day after emergency loss.";
 
 export const authCapabilityWarning =
   "Better Auth capability reference: advertised routes may be disabled. A schema entry does not guarantee that a capability is available. Public sign-up, email recovery and verification, and Google OAuth require separate deployment prerequisites.";
