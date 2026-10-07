@@ -1,3 +1,4 @@
+import { releaseCommit } from "../config/releaseIdentity.ts";
 import { isLogLevel } from "../lib/loggerCore.ts";
 import { authSecretOptions } from "../config/authSecrets.ts";
 import { reviewedProxyTrust } from "../config/browserBoundary.ts";
@@ -82,6 +83,7 @@ export function validateEnv(): { port: number } {
   }
   const production = environment === "production";
   reviewedProxyTrust();
+  releaseCommit();
   // Better Auth also reads this implicit variable for callback validation.
   // Production browser permissions must come only from the reviewed origins.
   if (production && process.env.BETTER_AUTH_TRUSTED_ORIGINS !== undefined) {
