@@ -41,13 +41,11 @@ CREATE ROLE top_vino_runtime LOGIN NOINHERIT NOSUPERUSER
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 GRANT CONNECT ON DATABASE top_vino_sandbox TO top_vino_runtime;
 GRANT USAGE ON SCHEMA public TO top_vino_runtime;
-ALTER DEFAULT PRIVILEGES FOR ROLE top_vino_owner IN SCHEMA public
-  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO top_vino_runtime;
-ALTER DEFAULT PRIVILEGES FOR ROLE top_vino_owner IN SCHEMA public
-  GRANT USAGE, SELECT ON SEQUENCES TO top_vino_runtime;
 ```
 
-After committed migrations create tables, grant CRUD on existing application tables and usage/select on existing sequences to the runtime role too. Exclude `_prisma_migrations` from runtime grants (migration history belongs to the owner): after initial migration, run `REVOKE ALL ON TABLE public."_prisma_migrations" FROM top_vino_runtime;`. Verify runtime cannot create/drop schema or tables, own objects, truncate tables, or assume an elevated role, and that the normal auth/Deck smoke works. The migrations must execute as the same owner whose default privileges you established.
+**Before creating the first Render candidate**, initialize the empty schema through the guarded workstation `npm run sandbox:migrate -- --confirm-target "$SANDBOX_DATABASE_TARGET"` action in [database safeguards](./sandbox-database.md). Privately prompt for DIRECT_URL in a subshell and set the workstation opt-in; this never starts the API. Confirm success without copying raw CLI output. The migration history table must exist before future default privileges are installed.
+
+Then grant CRUD on the explicit application/auth tables listed in [database safeguards](./sandbox-database.md), plus usage/select on application sequences if present. Exclude `_prisma_migrations` and revoke any existing grant on it. Only now set future application-table default CRUD privileges for the actual migration owner. Verify runtime has no migration-table privilege, cannot create/drop schema or tables, own objects, truncate tables, or assume an elevated role before any API starts; retain that first-start denial evidence. Normal auth/Deck smoke after deployment confirms the allowed privileges. The migration owner must be the same role whose defaults you set. No initial API is allowed to serve during a permissive grant window.
 
 ## 2. GitHub gate before deployment
 

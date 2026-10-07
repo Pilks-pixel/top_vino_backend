@@ -214,11 +214,14 @@ step "Select branch -> SQL Editor. Follow docs/deployment-runbook.md role SQL."
 step "Create runtime role using SQL, never console Add Role (it inherits admin)."
 step "Set password privately in console; obtain pooled runtime/direct owner TLS URLs."
 step "Store secret values in your private password manager; paste none here."
+step "Before API creation, run guarded workstation sandbox:migrate to initialize schema."
+step "Then explicit product CRUD grants, revoke migration history, and future-table defaults."
+step "Prove runtime migration-table/DDL/role denial before the first candidate starts."
 ask NEON_MIGRATION_ROLE "Verified migration owner role name:"
 ask NEON_RUNTIME_ROLE "Verified nonowner runtime role name:"
 write_env NEON_MIGRATION_ROLE "$NEON_MIGRATION_ROLE"
 write_env NEON_RUNTIME_ROLE "$NEON_RUNTIME_ROLE"
-confirm "Runtime privileges/default grants reviewed and endpoints distinct?" || exit 1
+confirm "Initial schema, migration-table denial, least privileges and endpoints verified?" || exit 1
 
 stage "Protected main and successful checks"
 open_url "https://github.com/Pilks-pixel/top_vino_backend/settings/rules"
