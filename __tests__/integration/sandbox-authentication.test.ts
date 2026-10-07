@@ -19,7 +19,8 @@ import { promisify } from "node:util";
 
 const execute = promisify(execFile);
 const temporary = await mkdtemp(join(tmpdir(), "top-vino-testers-"));
-const databaseTarget = "localhost:5432/top_vino_test";
+const testerDatabase = new URL(process.env.DATABASE_URL!);
+const databaseTarget = `${testerDatabase.host}${testerDatabase.pathname}`;
 
 async function provisionTester(email: string) {
   const file = join(temporary, `${email}.json`);
