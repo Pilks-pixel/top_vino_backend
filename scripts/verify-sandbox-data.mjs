@@ -27,24 +27,20 @@ try {
   const target = `127.0.0.1:${port}/postgres`;
   for (let count = 0; count < 100; count++) {
     try {
-      docker(["exec", name, "pg_isready", "-U", "postgres"]);
+      docker(["exec", name, "pg_isready", "-h", "127.0.0.1", "-U", "postgres"]);
       break;
     } catch {
       await delay(200);
     }
   }
-  execFileSync(
-    process.execPath,
-    ["node_modules/prisma/build/index.js", "migrate", "deploy"],
-    { env: { ...process.env, DATABASE_URL: url }, stdio: "pipe" },
-  );
   client = new pg.Client({ connectionString: url });
   await client.connect();
-  await client.query(
-    `INSERT INTO "user" (id,email,"updatedAt") VALUES ('synthetic-owner','fixture@example.test',CURRENT_TIMESTAMP)`,
-  );
+  // Only this harness's private PostgreSQL children emulate a workstation.
+  // Production guards remain exercised below with real CI/Render settings.
   const environment = {
     ...process.env,
+    CI: "false",
+    RENDER: "false",
     DIRECT_URL: url,
     SANDBOX_DATA_TOOLS_ENABLED: "true",
     SANDBOX_DATABASE_TARGET: target,
@@ -57,13 +53,65 @@ try {
         action,
         "--confirm-target",
         target,
-        "--email",
-        "fixture@example.test",
+        ...(["seed", "reset"].includes(action)
+          ? ["--email", "fixture@example.test"]
+          : []),
         ...args,
       ],
       { env, encoding: "utf8" },
     );
-  let result = command("seed");
+  for (const guard of [
+    { CI: "true" },
+    { RENDER: "true" },
+    { SANDBOX_DATA_TOOLS_ENABLED: "false" },
+    { SANDBOX_DATABASE_TARGET: "wrong-target" },
+  ]) {
+    const denied = command("migrate", [], { ...environment, ...guard });
+    assert.notEqual(
+      denied.status,
+      0,
+      "migrate guards must fail closed before schema changes",
+    );
+    assert.equal(
+      (
+        await client.query(
+          "SELECT to_regclass('public._prisma_migrations') AS history",
+        )
+      ).rows[0].history,
+      null,
+    );
+  }
+  let result = command("migrate");
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.ok(
+    !(result.stdout + result.stderr).includes("synthetic-owner-password"),
+  );
+  assert.ok(
+    !result.stdout.includes("Datasource"),
+    "raw Prisma output must never be forwarded",
+  );
+  const migrations = (
+    await client.query(
+      "SELECT migration_name FROM _prisma_migrations ORDER BY migration_name",
+    )
+  ).rows;
+  result = command("migrate");
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.deepEqual(
+    (
+      await client.query(
+        "SELECT migration_name FROM _prisma_migrations ORDER BY migration_name",
+      )
+    ).rows,
+    migrations,
+  );
+  await client.query(
+    `INSERT INTO "user" (id,email,"updatedAt") VALUES ('synthetic-owner','fixture@example.test',CURRENT_TIMESTAMP)`,
+  );
+  console.log(
+    "Guarded workstation migrations succeed and repeat without fixtures; real CI/Render execution is refused.",
+  );
+  result = command("seed");
   assert.equal(result.status, 0, result.stderr + result.stdout);
   const before = await client.query('SELECT id, name FROM "Deck"');
   assert.equal(before.rowCount, 1);
@@ -102,6 +150,22 @@ try {
     (await client.query('SELECT id FROM "Deck"')).rowCount,
     2,
     "diagnosis does not repair or reset",
+  );
+  result = command("migrate");
+  assert.notEqual(
+    result.status,
+    0,
+    "unfinished migration must block owner migration without automatic repair",
+  );
+  assert.ok(result.stdout.includes('"prismaCode":"P3009"'));
+  assert.ok(!result.stdout.includes("private-migration-log-sentinel"));
+  assert.equal(
+    (
+      await client.query(
+        "SELECT rolled_back_at FROM _prisma_migrations WHERE migration_name='20990101000000_interrupted'",
+      )
+    ).rows[0].rolled_back_at,
+    null,
   );
   console.log(
     "Operator status diagnoses interrupted migrations without exposing raw logs or modifying data.",

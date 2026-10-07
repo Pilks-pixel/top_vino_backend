@@ -1,11 +1,50 @@
 // Workstation-only; never loads dotenv, runtime Auth, or the API Prisma singleton.
 import { createHash } from "node:crypto";
 import { parseArgs } from "node:util";
+import { spawnSync } from "node:child_process";
+import { operatorDatabaseTarget } from "../src/scripts/operatorDatabaseTarget.ts";
 import { createLogger } from "../src/lib/loggerCore.ts";
 
 const logger = createLogger({ environment: "production", logLevel: "info" });
 const directUrl = process.env.DIRECT_URL;
 delete process.env.DIRECT_URL;
+
+function migrate() {
+  const result = spawnSync(
+    process.execPath,
+    [
+      "node_modules/prisma/build/index.js",
+      "migrate",
+      "deploy",
+      "--schema",
+      "prisma/schema.prisma",
+    ],
+    {
+      env: {
+        ...process.env,
+        DATABASE_URL: directUrl,
+        CHECKPOINT_DISABLE: "1",
+        PRISMA_HIDE_UPDATE_MESSAGE: "true",
+      },
+      encoding: "utf8",
+      maxBuffer: 1024 * 1024,
+    },
+  );
+  if (result.status !== 0) {
+    const prismaCode = `${result.stderr ?? ""}${result.stdout ?? ""}`.match(
+      /\bP\d{4}\b/,
+    )?.[0];
+    logger.error(
+      { event: "sandbox_migration_failed", prismaCode },
+      "Inspect migration status and schema before retry; no automatic resolution",
+    );
+    throw new Error("Migration failed");
+  }
+  logger.info(
+    { event: "sandbox_migration_completed" },
+    "Committed migrations applied or already current; no fixtures created",
+  );
+}
 
 async function main() {
   const { values, positionals } = parseArgs({
@@ -20,39 +59,15 @@ async function main() {
   const action = positionals[0];
   if (
     positionals.length !== 1 ||
-    !["seed", "reset", "status"].includes(action) ||
+    !["seed", "reset", "status", "migrate"].includes(action) ||
     process.env.SANDBOX_DATA_TOOLS_ENABLED !== "true" ||
     process.env.RENDER === "true" ||
     process.env.CI === "true" ||
     !directUrl
   )
     throw new Error("Operator safeguards");
-  const database = new URL(directUrl);
-  const target = `${database.host}${database.pathname}`;
+  const { database, target } = operatorDatabaseTarget(directUrl);
   if (
-    !["postgres:", "postgresql:"].includes(database.protocol) ||
-    !database.hostname ||
-    !database.port ||
-    database.pathname.length <= 1 ||
-    database.hash ||
-    [...database.searchParams.keys()].some(
-      key => database.searchParams.getAll(key).length !== 1,
-    ) ||
-    !database.username ||
-    !database.password ||
-    [
-      "host",
-      "port",
-      "dbname",
-      "database",
-      "user",
-      "password",
-      "options",
-      "service",
-    ].some(key => database.searchParams.has(key)) ||
-    (database.searchParams.has("schema") &&
-      database.searchParams.get("schema") !== "public") ||
-    database.searchParams.get("pgbouncer") === "true" ||
     process.env.SANDBOX_DATABASE_TARGET !== target ||
     values["confirm-target"] !== target
   )
@@ -60,11 +75,15 @@ async function main() {
   if (action === "reset" && values["confirm-destruction"] !== `ERASE ${target}`)
     throw new Error("Destructive confirmation");
   if (
-    action !== "status" &&
+    ["seed", "reset"].includes(action) &&
     (!values.email ||
       !/^[a-z0-9][a-z0-9._-]{0,63}@example\.test$/.test(values.email))
   )
     throw new Error("Synthetic tester required");
+  if (action === "migrate") {
+    migrate();
+    return;
+  }
   const { default: pg } = await import("pg");
   const client = new pg.Client({
     connectionString: directUrl,
@@ -134,20 +153,7 @@ async function main() {
       if (accounts.length !== 1)
         throw new Error("Provisioned credential account required");
       await client.query("DROP SCHEMA public CASCADE; CREATE SCHEMA public");
-      const { spawnSync } = await import("node:child_process");
-      const result = spawnSync(
-        process.execPath,
-        [
-          "node_modules/prisma/build/index.js",
-          "migrate",
-          "deploy",
-          "--schema",
-          "prisma/schema.prisma",
-        ],
-        { env: { ...process.env, DATABASE_URL: directUrl }, encoding: "utf8" },
-      );
-      if (result.status !== 0)
-        throw new Error("Replay failed; inspect migration status");
+      migrate();
       await client.query("BEGIN");
       const restore = async (table, row) => {
         const columns = Object.keys(row);

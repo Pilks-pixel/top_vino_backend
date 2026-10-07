@@ -284,13 +284,10 @@ try {
     "-d",
     "synthetic",
     "-c",
-    `CREATE ROLE sandbox_runtime LOGIN PASSWORD 'synthetic-runtime-password' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT; REVOKE CREATE ON SCHEMA public FROM PUBLIC; GRANT USAGE ON SCHEMA public TO sandbox_runtime; ALTER DEFAULT PRIVILEGES FOR ROLE synthetic IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO sandbox_runtime;`,
+    `CREATE ROLE sandbox_runtime LOGIN PASSWORD 'synthetic-runtime-password' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT; REVOKE CREATE ON SCHEMA public FROM PUBLIC; GRANT USAGE ON SCHEMA public TO sandbox_runtime;`,
   ]);
-  const first = run(`${prefix}-first`, env, ["--network", network]);
-  await healthy(first);
-  assert.equal(probe(first, "/ready").status, 200);
-  assert.ok(events(first).some(log => log.event === "migration_completed"));
-  await shutdown(first, "SIGTERM");
+  // Empty-schema migration acceptance has no default/table CRUD grants: even
+  // this disposable candidate cannot access administrative migration history.
   docker([
     "exec",
     database,
@@ -300,8 +297,79 @@ try {
     "-d",
     "synthetic",
     "-c",
-    "REVOKE ALL ON _prisma_migrations FROM sandbox_runtime",
+    "CREATE DATABASE candidate_empty",
   ]);
+  const emptyEnv = {
+    ...env,
+    DATABASE_URL: env.DATABASE_URL.replace("/synthetic?", "/candidate_empty?"),
+    DIRECT_URL: env.DIRECT_URL.replace("/synthetic?", "/candidate_empty?"),
+  };
+  const empty = run(`${prefix}-empty-schema`, emptyEnv, ["--network", network]);
+  await healthy(empty);
+  assert.equal(probe(empty, "/ready").status, 200);
+  assert.ok(events(empty).some(log => log.event === "migration_completed"));
+  docker([
+    "exec",
+    empty,
+    "node",
+    "--input-type=module",
+    "-e",
+    `
+    import assert from 'node:assert/strict';
+    const {default:prisma}=await import('./dist/lib/prisma.js');
+    await assert.rejects(prisma.$queryRawUnsafe('SELECT * FROM _prisma_migrations'));
+    await assert.rejects(prisma.$executeRawUnsafe("UPDATE _prisma_migrations SET checksum='forbidden'"));
+    await prisma.$disconnect();
+  `,
+  ]);
+  await shutdown(empty, "SIGTERM");
+  // Initialize the main test schema through the owner migration gate without
+  // starting any API process; grants are then installed before first serving.
+  const initialize = run(
+    `${prefix}-initialize`,
+    env,
+    ["--network", network],
+    ["node", "--input-type=module", "-e", "process.exit(0)"],
+  );
+  await exited(initialize, 0);
+  assert.ok(
+    events(initialize).some(log => log.event === "migration_completed"),
+  );
+  assert.ok(!events(initialize).some(log => log.event === "server_started"));
+  docker([
+    "exec",
+    database,
+    "psql",
+    "-U",
+    "synthetic",
+    "-d",
+    "synthetic",
+    "-c",
+    `
+    GRANT SELECT, INSERT, UPDATE, DELETE ON "user", "account", "session", "verification", "Deck", "Card", "DeckCollaborator", "UserCardProgress", "UserResponse", "UserCardReview" TO sandbox_runtime;
+    ALTER DEFAULT PRIVILEGES FOR ROLE synthetic IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO sandbox_runtime;
+    REVOKE ALL ON _prisma_migrations FROM sandbox_runtime;
+  `,
+  ]);
+  const first = run(`${prefix}-first`, env, ["--network", network]);
+  await healthy(first);
+  assert.equal(probe(first, "/ready").status, 200);
+  assert.ok(events(first).some(log => log.event === "migration_completed"));
+  docker([
+    "exec",
+    first,
+    "node",
+    "--input-type=module",
+    "-e",
+    `
+    import assert from 'node:assert/strict';
+    const {default:prisma}=await import('./dist/lib/prisma.js');
+    await assert.rejects(prisma.$queryRawUnsafe('SELECT * FROM _prisma_migrations'),'first serving runtime must never read migration history');
+    await assert.rejects(prisma.$executeRawUnsafe("UPDATE _prisma_migrations SET checksum='forbidden'"),'first serving runtime must never mutate migration history');
+    await prisma.$disconnect();
+  `,
+  ]);
+  await shutdown(first, "SIGTERM");
   // Provision the harness fixture outside runtime HTTP. Public and production
   // server-side sign-up capabilities remain disabled.
   docker([

@@ -47,6 +47,14 @@ must have only database CONNECT, schema USAGE and application-table CRUD.
 It must not own the database/tables, create schema objects or roles, inherit
 privileged roles, bypass row-level security or access `_prisma_migrations`.
 
+Before the first Render candidate starts, use the guarded workstation migration
+command below to initialize the schema with the owner connection. Do not install
+blanket future-table grants beforehand: those would expose newly created
+`_prisma_migrations` to the runtime role. The migration command starts no API and
+creates no fixtures. Then create the runtime role and apply only the explicit
+application-table grants below, set future defaults after migration history
+already exists, and verify history denial before launching the first candidate.
+
 Use an owner connection from a trusted workstation. Create the runtime role via
 SQL if the dashboard's default role has elevated membership, and set its password
 through a private provider control or psql's `\password`, never a tracked SQL
@@ -88,13 +96,22 @@ SELECT count(*) FROM pg_tables WHERE schemaname = 'public'
 Expect all privilege flags false, schema CREATE false, role memberships zero,
 migration SELECT false and table ownership zero. Test a product read and write,
 and confirm that CREATE TABLE is denied. The final-image harness exercises a
-separate nonowner runtime role, API sign-in/read and DDL/migration-table denial.
+separate nonowner runtime role, API sign-in/read and DDL/migration-table denial
+from the first serving instance. A separate empty-schema candidate verifies
+startup migration with no runtime grants on migration history.
 These local tests do not establish the live Neon grants; record live evidence.
 
-## Workstation seed and status
+## Workstation migrate, seed and status
 
-Install locked dependencies using the pinned Node/npm baseline. Provision an
-individual `example.test` tester first using [the private provisioning command](synthetic-testers.md).
+Install locked dependencies using the pinned Node/npm baseline. `sandbox:migrate`
+requires the opt-in and exact disposable-target confirmation, but no tester/email
+or destructive confirmation. It uses only the installed locked Prisma CLI to
+apply committed migrations, emits safe status/error-code events, and never
+forwards arbitrary Prisma output, repairs failed migration state, seeds or starts
+the API. A current schema is a no-op. This is the initial owner-only schema step
+before runtime grants and first candidate startup.
+
+Provision an individual `example.test` tester first using [the private provisioning command](synthetic-testers.md).
 The seed takes that tester's email; it creates a deterministic private Wine
 Fundamentals Deck and three canonical Cards. It creates no shared account,
 password, session or HTTP administrative endpoint. Existing Deck/Card content,
@@ -104,8 +121,9 @@ fail safely, without reclaiming another user's data.
 Use a hidden credential prompt and a short-lived subshell. Independently verify
 the disposable target from dashboard inventory first; the confirmation compares
 exact `host:port/database`, including explicit port. Alternate connection-target
-query options are refused. Tools refuse Render and CI environments and never
-load `.env` or runtime Auth/Prisma modules.
+query options are refused. Tools refuse Render and CI environments. The operator
+wrapper never loads `.env` or runtime Auth/Prisma modules; migration subprocesses
+receive the explicitly confirmed owner URL as `DATABASE_URL`.
 
 ```bash
 (
@@ -114,6 +132,10 @@ load `.env` or runtime Auth/Prisma modules.
   read -r -s -p 'Direct owner URL: ' DIRECT_URL
   printf '\n'
   export DIRECT_URL
+  # Initial schema: run this BEFORE runtime grants and first candidate launch.
+  npm run sandbox:migrate -- --confirm-target "$SANDBOX_DATABASE_TARGET"
+  # Apply/verify the explicit role grants above, provision a tester privately,
+  # then optionally create fixtures:
   npm run sandbox:seed -- --email tester-001@example.test \
     --confirm-target "$SANDBOX_DATABASE_TARGET"
   npm run sandbox:status -- --confirm-target "$SANDBOX_DATABASE_TARGET"
@@ -156,5 +178,8 @@ complete. Recheck live grants, readiness, sign-in, authorized read and redacted
 logs after any rebuild. Record notification and completion without credentials.
 
 Run `npm run test:sandbox-data` for isolated temporary PostgreSQL CLI acceptance
-and `npm run test:container` for the final Linux AMD64 candidate contract. Live
+and `npm run test:container` for the final Linux AMD64 candidate contract.
+The operator harness explicitly emulates a workstation only for children using
+its private disposable PostgreSQL; it also proves real CI/Render environments
+are refused. Live
 Neon/Render behavior remains pending until dashboard setup and smoke are verified.
