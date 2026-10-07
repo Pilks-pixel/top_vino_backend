@@ -168,7 +168,14 @@ describe("production synthetic tester authentication", () => {
             "postgresql://user:private-database-password@localhost:5432/other",
         },
       },
-      ...["host=localhost", "port=5432"].map(override => ({
+      ...[
+        "host=localhost",
+        "port=5432",
+        "options=-csearch_path%3Dpublic",
+        "user=pete",
+        "schema=other",
+        "schema=public&schema=other",
+      ].map(override => ({
         env: {
           ...env,
           SANDBOX_PROVISIONING_DATABASE_URL: `${process.env.DATABASE_URL}?${override}`,

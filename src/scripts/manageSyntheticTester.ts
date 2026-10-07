@@ -1,3 +1,4 @@
+import { operatorDatabaseTarget } from "./operatorDatabaseTarget.ts";
 import { randomBytes, randomUUID } from "node:crypto";
 import { open, realpath, unlink } from "node:fs/promises";
 import { dirname, isAbsolute, join, basename, resolve, sep } from "node:path";
@@ -30,17 +31,8 @@ async function main(): Promise<void> {
   )
     throw new Error("Operator safeguards not satisfied");
 
-  const database = new URL(databaseUrl);
-  const target = `${database.host}${database.pathname}`;
+  const { target } = operatorDatabaseTarget(databaseUrl);
   if (
-    !["postgres:", "postgresql:"].includes(database.protocol) ||
-    !database.hostname ||
-    !database.port ||
-    Number(database.port) < 1 ||
-    Number(database.port) > 65535 ||
-    database.searchParams.has("host") ||
-    database.searchParams.has("port") ||
-    database.pathname.length <= 1 ||
     process.env.SANDBOX_DATABASE_TARGET !== target ||
     values["confirm-target"] !== target
   )
@@ -70,6 +62,7 @@ async function main(): Promise<void> {
   const databaseClient = new pg.Client({
     connectionString: databaseUrl,
     connectionTimeoutMillis: 15_000,
+    options: "-c search_path=public",
   });
   databaseClient.on("error", () => {
     logger.error(

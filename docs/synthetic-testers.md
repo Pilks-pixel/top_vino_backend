@@ -43,7 +43,9 @@ its separate runtime database role.
 
 The command requires explicit opt-in, an exact `host:port/database` target with
 an explicit port, matching target confirmation, and a synthetic ID at
-`example.test`. URL query parameters named `host` or `port` are refused so the
+`example.test`. Connection-identity query overrides (`host`, `port`, `dbname`, `database`, `user`,
+`password`, `options`, `service`), duplicate parameters, non-public schemas and pooled
+operator URLs are refused. The connection uses the public schema explicitly; the
 driver cannot override the confirmed target or inherit an ambient `PGPORT`.
 Provisioning requires an absolute delivery-file path outside the checkout, with an existing
 parent directory and no existing file.
