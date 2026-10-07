@@ -7,3 +7,5 @@ coverage/
 .env.test
 
 dist/
+
+.sandbox-operator.env
