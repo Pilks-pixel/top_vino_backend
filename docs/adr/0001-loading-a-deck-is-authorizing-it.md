@@ -17,3 +17,18 @@ There is deliberately no `getDeckByID(id)` or `getCardByID(id)`. Reintroducing o
 Collections are covered by the same rule through a visibility scope composed into the query, so unauthorized rows are never selected rather than filtered out afterwards. This couples Deck Access to the persistence layer's query shape, which we accepted in exchange for correct pagination and counts.
 
 A requestor who lacks privilege on a deck that exists receives 403, not 404. Application-owned Deck and Card identifiers are UUIDs and cannot be practically enumerated, so confirming existence gains an attacker little, and honest errors are worth considerably more when diagnosing access bugs. Requestor and User Profile identifiers are owned by Better Auth and treated as opaque strings; Deck Access relies on authenticated identity and exact identifier equality, never identifier format or presumed unguessability.
+
+## Named workstation operator exception
+
+Deployment spec #41 and ticket #46 require a narrowly separate operator boundary:
+`scripts/sandbox-data.mjs` seed/reset/status against an independently verified
+disposable synthetic database. Its Deck/Card ownership checks and reset are an
+explicit exception to requestor-based Deck Access. The command requires workstation
+opt-in and exact target confirmation; reset additionally requires destructive
+confirmation. It refuses CI/Render execution, constrains the public schema, uses
+a temporary direct owner connection, and ships outside the production image.
+
+This exception grants no HTTP capability, runtime helper, background job, or
+administrative product route. All application Deck/Card reads continue through
+Deck Access with authenticated Requestor and Action. See
+[operator safeguards](../sandbox-database.md) for the isolated command contract.

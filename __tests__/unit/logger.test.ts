@@ -46,6 +46,7 @@ describe("createLogger", () => {
       {
         BETTER_AUTH_SECRETS: "private-versioned-signing-secrets",
         DATABASE_URL: "private-runtime-database-url",
+        DIRECT_URL: "private-new-direct-database-url",
         GOOGLE_CLIENT_SECRET: "private-provider-secret",
         requestBody: { content: "private-request-content" },
         callbackURL: "https://example.test/private-callback-token",
@@ -61,6 +62,7 @@ describe("createLogger", () => {
     expect(JSON.parse(output[0])).toMatchObject({
       BETTER_AUTH_SECRETS: "[Redacted]",
       DATABASE_URL: "[Redacted]",
+      DIRECT_URL: "[Redacted]",
       GOOGLE_CLIENT_SECRET: "[Redacted]",
       requestBody: "[Redacted]",
       callbackURL: "[Redacted]",
