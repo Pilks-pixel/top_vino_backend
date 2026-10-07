@@ -16,7 +16,8 @@ export default async function globalSetup() {
   dotenv.config({ path: ".env.test" });
 
   const TEST_DB = "top_vino_test";
-  const configuredDatabaseUrl = process.env.DATABASE_URL;
+  const configuredDatabaseUrl =
+    process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
   if (!configuredDatabaseUrl) {
     throw new Error(
       "[globalSetup] DATABASE_URL must be set to connect to PostgreSQL.",
@@ -57,7 +58,7 @@ export default async function globalSetup() {
 
   // 2. Run migrations against test database
   console.log("[globalSetup] Running migrations...");
-  execSync("npx prisma migrate deploy", {
+  execSync("./node_modules/.bin/prisma migrate deploy", {
     env: {
       ...process.env,
       DATABASE_URL: testDatabaseUrl.toString(),

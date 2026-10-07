@@ -27,7 +27,8 @@
     "sandbox:reset": "node scripts/sandbox-data.mjs reset",
     "sandbox:status": "node scripts/sandbox-data.mjs status",
     "test:sandbox-data": "node scripts/verify-sandbox-data.mjs",
-    "sandbox:migrate": "node scripts/sandbox-data.mjs migrate"
+    "sandbox:migrate": "node scripts/sandbox-data.mjs migrate",
+    "test:operations": "node --test __tests__/operations/*.test.mjs"
   },
   "keywords": [],
   "author": "",
@@ -54,7 +55,8 @@
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.9",
     "typescript-eslint": "^8.30.1",
-    "typescript": "5.8.3"
+    "typescript": "5.8.3",
+    "js-yaml": "4.1.1"
   },
   "jest": {
     "preset": "ts-jest/presets/default-esm",
