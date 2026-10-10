@@ -28,9 +28,13 @@ Credential-bearing fields are redacted from every log record project-wide, repla
 
 Every HTTP response produces one automatic log record through `pino-http`, including requests to the authentication routes. The record carries safe request metadata only:
 
-- method, path with the query string stripped, redacted headers, remote address
+- method, route shape with queries and path parameters removed, selected transport headers, remote address
 - no request bodies, no raw query strings
 - the response status code
+
+Only Host, Content-Type and Content-Length remain in automatic request headers. Origin, Referer, credential headers and unknown headers are omitted. Known product paths use placeholders such as `/deck/:deckId/cards/:cardId`; unknown paths use `/[unmatched]` or `/api/auth/[unavailable]`. This tightens the safe-path/redacted-header contract to exclude token-bearing paths and newly named credential headers. Raw error messages and stacks are excluded from structured failure logs; request IDs, event, status and error type support correlation. Development HTTP errors may still include debugging stacks; production responses do not.
+
+Structured redaction also covers `DATABASE_URL`, `DIRECT_DATABASE_URL`, `GOOGLE_CLIENT_SECRET`, `BETTER_AUTH_SECRETS`, `SANDBOX_PROVISIONING_DATABASE_URL`, request-body fields and authentication callback URLs. Better Auth's unexpected-error hook converts database failures to generic API errors before its underlying router can print raw errors to console. See the [browser boundary](./browser-boundary.md) for the HTTP privacy checks.
 
 The log level follows the outcome: `5xx` responses and request errors log at `error`, `4xx` at `warn`, everything else at `info`.
 

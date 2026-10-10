@@ -146,12 +146,12 @@ describe("automatic HTTP logging", () => {
       .set("Cookie", "session=auth-cookie-secret");
 
     const requestLog = loggedRequests().find(
-      log => log.req?.url === "/api/auth/not-a-real-route",
+      log => log.req?.url === "/api/auth/[unavailable]",
     );
     expect(requestLog).toMatchObject({
       req: {
         method: "GET",
-        url: "/api/auth/not-a-real-route",
+        url: "/api/auth/[unavailable]",
       },
     });
     expect(output.join("")).not.toContain("auth-query-secret");
@@ -223,9 +223,7 @@ describe("automatic HTTP logging", () => {
 
     await request(app).get("/non-existent-route-for-status-check");
     const notFoundLog = loggedRequests().find(
-      log =>
-        log.req?.url === "/non-existent-route-for-status-check" &&
-        log.msg === "request completed",
+      log => log.req?.url === "/[unmatched]" && log.msg === "request completed",
     );
     expect(notFoundLog?.level).toBe(40);
   });

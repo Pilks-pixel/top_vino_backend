@@ -4,7 +4,7 @@ A spaced repetition learning/flashcard application backend built with Node.js, E
 
 ## 📚 Documentation
 
-- [Domain glossary](./docs/CONTEXT.md) — the ubiquitous language for decks, cards, access, and study
+- [Domain glossary](./docs/GLOSSARY.md) — the ubiquitous language for decks, cards, access, and study
 - [Architecture decision records](./docs/adr/) — settled decisions; append-only
 - [Testing guide](./docs/TESTING.md) — how to run tests and how the test database setup works
 - [Production image](./docs/production-image.md) — pinned runtime, configuration, and container acceptance

@@ -1,7 +1,13 @@
 import { rateLimit } from "express-rate-limit";
 
 export function createRateLimiters() {
-  const headers = { standardHeaders: "draft-6", legacyHeaders: false } as const;
+  const headers = {
+    standardHeaders: "draft-6",
+    legacyHeaders: false,
+    // Ignoring untrusted forwarded headers is intentional, including when
+    // attackers send them directly. The reviewed Express trust rule owns IPs.
+    validate: { xForwardedForHeader: false },
+  } as const;
 
   return {
     generalLimiter: rateLimit({

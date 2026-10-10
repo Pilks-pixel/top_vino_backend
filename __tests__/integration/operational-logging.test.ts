@@ -79,7 +79,7 @@ describe("operational failure logging", () => {
     expect(loggedRecords()).toContainEqual(
       expect.objectContaining({
         event: "validation_failure",
-        route: "/user/user-123",
+        route: "/user/:userId",
         statusCode: 400,
         requestId,
         req: expect.objectContaining({ id: requestId }),
