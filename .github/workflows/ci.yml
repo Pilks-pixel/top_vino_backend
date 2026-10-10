@@ -1,61 +1,81 @@
 name: CI
-
 on:
-    push:
-      branches:
-      - main
-      - feat/phase-5-security
-
-    pull_request:
-      branches:
-      - main
-
+  push:
+    branches: [main]
+  pull_request:
+    # Parent branch targets keep every stacked draft reviewable in CI too.
+    branches: [main, "sandbox/**", feat/render-deployment]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   quality:
-    runs-on: ubuntu-latest
-
+    # Literal job names are the raw GitHub check contexts used by the ruleset.
+    name: CI / quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     services:
       postgres:
-        image: postgres:15
+        image: postgres:15@sha256:3b0d656f5fff31c7d8a64f500a703dcf3f35e98ce78f602831a73059a5e6a012
         env:
-          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_USER: synthetic
+          POSTGRES_PASSWORD: synthetic-ci-password
           POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
+        ports: ["5432:5432"]
         options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
+          --health-cmd "pg_isready -U synthetic -d postgres"
+          --health-interval 10s --health-timeout 5s --health-retries 5
     env:
-      DATABASE_URL: postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/top_vino_test
-      BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
-      BETTER_AUTH_URL: http://localhost:8000
       NODE_ENV: test
-      PORT: 8000
+      HUSKY: "0"
+      PRISMA_SKIP_POSTINSTALL_GENERATE: "true"
+      CHECKPOINT_DISABLE: "1"
+      PRISMA_HIDE_UPDATE_MESSAGE: "true"
+      DATABASE_URL: postgresql://synthetic:synthetic-ci-password@localhost:5432/top_vino_test
+      BETTER_AUTH_SECRET: synthetic-ci-secret-at-least-32-characters
+      BETTER_AUTH_URL: http://localhost:8001
       FRONTEND_URL: http://localhost:3000
-
+      PORT: "8001"
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Install Node
-        uses: actions/setup-node@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
+      - name: Verify pinned tools
+        run: test "$(node --version)" = "v24.20.0" && test "$(npm --version)" = "11.19.0"
+      - name: Locked clean install
+        run: npm ci --no-audit --no-fund
+      - name: Generate target-native Prisma client
+        run: ./node_modules/.bin/prisma generate
       - name: Lint
         run: npm run lint
-
-      - name: Check Types
+      - name: Types
         run: npm run check-types
-
-      - name: Test
+      - name: Production build
+        run: npm run build
+      - name: Complete Jest suite
         run: npm test
+      - name: Guarded sandbox seed/reset acceptance
+        run: node scripts/verify-sandbox-data.mjs
+      - name: Operator and CI contract tests
+        run: npm run test:operations
+  container:
+    name: CI / container
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .nvmrc
+      - name: Verify pinned tools
+        run: test "$(node --version)" = "v24.20.0" && test "$(npm --version)" = "11.19.0"
+      - name: Exercise final AMD64 image with disposable PostgreSQL
+        run: node scripts/verify-production-image.mjs
