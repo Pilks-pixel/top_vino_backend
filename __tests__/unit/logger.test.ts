@@ -31,6 +31,33 @@ describe("resolveLogLevel", () => {
 });
 
 describe("createLogger", () => {
+  it("redacts versioned signing secrets and temporary operator database credentials", () => {
+    const output: string[] = [];
+    const logger = createLogger({
+      environment: "production",
+      logLevel: "info",
+      destination: {
+        write: (line: string) => {
+          output.push(line);
+        },
+      },
+    });
+    logger.info(
+      {
+        BETTER_AUTH_SECRETS: "private-versioned-signing-secrets",
+        operator: {
+          SANDBOX_PROVISIONING_DATABASE_URL:
+            "private-provisioning-database-url",
+        },
+      },
+      "Configuration metadata",
+    );
+    expect(output.join("")).not.toContain("private-");
+    expect(JSON.parse(output[0])).toMatchObject({
+      BETTER_AUTH_SECRETS: "[Redacted]",
+      operator: { SANDBOX_PROVISIONING_DATABASE_URL: "[Redacted]" },
+    });
+  });
   it("writes to an injected destination without changing the environment", () => {
     const originalEnvironment = { ...process.env };
     const output: string[] = [];

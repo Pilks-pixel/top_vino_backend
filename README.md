@@ -8,6 +8,7 @@ A spaced repetition learning/flashcard application backend built with Node.js, E
 - [Architecture decision records](./docs/adr/) — settled decisions; append-only
 - [Testing guide](./docs/TESTING.md) — how to run tests and how the test database setup works
 - [Production image](./docs/production-image.md) — pinned runtime, configuration, and container acceptance
+- [Synthetic testers](./docs/synthetic-testers.md) — guarded provisioning/revocation, production auth stage, and signing-key rotation
 - [Logging contract](./docs/logging.md) — levels, redaction, correlation, failure events
 - [Agent docs](./docs/agents/) — issue tracker, triage labels, domain doc conventions
 
@@ -36,10 +37,15 @@ The generated OpenAPI 3.1 document is served as JSON at `GET /openapi.json`.
 Its component schemas are generated from the same registered Zod schemas used
 by request validation and response contracts.
 
-When `NODE_ENV=development`, a browsable Scalar reference is available at
-`GET /docs`. Its interactive console includes browser cookies, so endpoints
-that use the current Better Auth session can be tried against the local server.
-The reference UI is not mounted in production.
+A public Scalar reference is available at `GET /docs`, including in production.
+It describes live product routes alongside a clearly labeled Better Auth
+capability reference, whose advertised routes may be disabled. Its interactive
+console includes browser cookies for session-authenticated requests.
+
+**The public sandbox uses synthetic disposable data, may sleep or reset, and
+has no uptime or recovery promise.** Documentation and schemas discourage
+indexing and share a separate limit of 60 requests per minute per client IP.
+Unauthenticated `/health` and `/ready` probes bypass application request limits.
 
 See [docs/api-reference.md](./docs/api-reference.md) for the full developer
 workflow: the two Scalar sources, the seed fixture and credentials, the guarded

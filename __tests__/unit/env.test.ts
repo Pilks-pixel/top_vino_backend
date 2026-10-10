@@ -8,6 +8,8 @@ describe("validateEnv", () => {
     process.env.DATABASE_URL = "postgresql://localhost:5432/top_vino";
     process.env.BETTER_AUTH_SECRET = "some-super-secret-key-at-least-32-chars";
     process.env.BETTER_AUTH_URL = "http://localhost:8000";
+    delete process.env.BETTER_AUTH_SECRETS;
+    delete process.env.AUTH_SECRET;
   });
 
   afterEach(() => {
@@ -19,6 +21,9 @@ describe("validateEnv", () => {
     process.env.PORT = "8000";
     process.env.BETTER_AUTH_URL = "https://api.example.test";
     process.env.FRONTEND_URL = "https://frontend.example.test";
+    process.env.BETTER_AUTH_SECRETS =
+      "1:synthetic-production-signing-secret-at-least-32-characters";
+    delete process.env.BETTER_AUTH_SECRET;
     delete process.env.GOOGLE_CLIENT_ID;
     delete process.env.GOOGLE_CLIENT_SECRET;
     delete process.env.LOG_LEVEL;
@@ -55,6 +60,46 @@ describe("validateEnv", () => {
   });
 
   it("returns without throwing when all required vars are set", () => {
+    expect(() => validateEnv()).not.toThrow();
+  });
+
+  it("requires versioned signing secrets in production even when a valid singular secret exists", () => {
+    productionEnv();
+    delete process.env.BETTER_AUTH_SECRETS;
+    process.env.BETTER_AUTH_SECRET = "some-super-secret-key-at-least-32-chars";
+    expect(() => validateEnv()).toThrow(/BETTER_AUTH_SECRETS/);
+  });
+
+  it.each([
+    "",
+    "private-malformed-secret",
+    "1:private-short-secret",
+    "1junk:private-signing-secret-longer-than-32-characters",
+    "-1:private-signing-secret-longer-than-32-characters",
+    "9007199254740992:private-signing-secret-longer-than-32-characters",
+    "1:private-signing-secret-longer-than-32-characters,1:other-private-secret-longer-than-32-characters",
+    "1:private-signing-secret-longer-than-32-characters,2:other-private-secret-longer-than-32-characters",
+    "2:private-signing-secret-longer-than-32-characters,1:private-signing-secret-longer-than-32-characters",
+    "1: private-signing-secret-longer-than-32-characters",
+    "1:private-signing-secret-longer-than-32-characters,",
+  ])(
+    "rejects malformed production versioned secrets without exposing their values (%#)",
+    value => {
+      productionEnv();
+      process.env.BETTER_AUTH_SECRETS = value;
+      expect(() => validateEnv()).toThrow(/BETTER_AUTH_SECRETS/);
+      try {
+        validateEnv();
+      } catch (error) {
+        expect((error as Error).message).not.toContain("private-");
+      }
+    },
+  );
+
+  it("accepts overlapping keys with the highest version first and no singular production secret", () => {
+    productionEnv();
+    process.env.BETTER_AUTH_SECRETS =
+      "3:current-synthetic-signing-secret-at-least-32-characters,1:previous-synthetic-signing-secret-at-least-32-characters";
     expect(() => validateEnv()).not.toThrow();
   });
 

@@ -17,7 +17,8 @@ const containers = [];
 const temporary = mkdtempSync(resolve(tmpdir(), "top-vino-image-"));
 const env = {
   DATABASE_URL: `postgresql://synthetic:synthetic-password@${database}:5432/synthetic?connect_timeout=1&pool_timeout=1`,
-  BETTER_AUTH_SECRET: "synthetic-image-test-secret-with-at-least-32-characters",
+  BETTER_AUTH_SECRETS:
+    "1:synthetic-image-test-secret-with-at-least-32-characters",
   BETTER_AUTH_URL: "https://api.example.test",
   FRONTEND_URL: "https://frontend.example.test",
   PORT: "49152",
@@ -186,6 +187,7 @@ try {
     ["DATABASE_URL", ""],
     ["PORT", "private-invalid-port"],
     ["BETTER_AUTH_SECRET", "private-short-secret"],
+    ["BETTER_AUTH_SECRETS", "private-malformed-secrets"],
     ["BETTER_AUTH_URL", "private-invalid-url"],
     ["FRONTEND_URL", ""],
     ["LOG_LEVEL", "private-invalid-level"],
@@ -269,7 +271,8 @@ try {
     ],
     { stdio: "inherit" },
   );
-  // Provision a synthetic tester via Better Auth's server API, outside runtime HTTP.
+  // Provision the harness fixture outside runtime HTTP. Public and production
+  // server-side sign-up capabilities remain disabled.
   docker([
     "run",
     "--rm",
@@ -285,9 +288,12 @@ try {
     "--input-type=module",
     "-e",
     `
-      const {auth} = await import('./dist/lib/auth.js');
-      await auth.api.signUpEmail({body:{name:'Image Tester',email:'image@example.test',password:'synthetic-tester-password'}});
-      const {default:prisma} = await import('./dist/lib/prisma.js'); await prisma.$disconnect();
+      const {randomUUID} = await import('node:crypto');
+      const {hashPassword} = await import('better-auth/crypto');
+      const {default:prisma} = await import('./dist/lib/prisma.js');
+      const id = randomUUID();
+      await prisma.user.create({data:{id,name:'Image Tester',email:'image@example.test',accounts:{create:{id:randomUUID(),accountId:id,providerId:'credential',password:await hashPassword('synthetic-tester-password')}}}});
+      await prisma.$disconnect();
     `,
   ]);
   const api = run(`${prefix}-api`, env, [

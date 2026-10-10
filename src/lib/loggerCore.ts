@@ -5,6 +5,9 @@ const REDACTED_VALUE = "[Redacted]";
 // Credential-bearing field names are redacted from every log record
 // project-wide, wherever they appear (top level, nested, or in arrays).
 const SENSITIVE_FIELD_NAMES = [
+  "BETTER_AUTH_SECRET",
+  "BETTER_AUTH_SECRETS",
+  "SANDBOX_PROVISIONING_DATABASE_URL",
   "accessKey",
   "accesskey",
   "accessToken",
