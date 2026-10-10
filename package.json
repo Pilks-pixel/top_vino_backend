@@ -22,7 +22,12 @@
     "lint": "eslint .",
     "validate": "npm run check-types && npm run lint && npm run format",
     "prepare": "husky",
-    "test:container": "node scripts/verify-production-image.mjs"
+    "test:container": "node scripts/verify-production-image.mjs",
+    "sandbox:seed": "node scripts/sandbox-data.mjs seed",
+    "sandbox:reset": "node scripts/sandbox-data.mjs reset",
+    "sandbox:status": "node scripts/sandbox-data.mjs status",
+    "test:sandbox-data": "node scripts/verify-sandbox-data.mjs",
+    "sandbox:migrate": "node scripts/sandbox-data.mjs migrate"
   },
   "keywords": [],
   "author": "",

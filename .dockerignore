@@ -10,6 +10,12 @@
 src/scripts/
 !prisma/
 !prisma/schema.prisma
+!prisma/migrations/
+!prisma/migrations/**
+!scripts/
+!scripts/assemble-migration-runtime.mjs
+!scripts/release/
+!scripts/release/**
 !Dockerfile
 # Do not re-include local files nested under an allowed source directory.
 **/.env

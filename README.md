@@ -8,6 +8,7 @@ A spaced repetition learning/flashcard application backend built with Node.js, E
 - [Architecture decision records](./docs/adr/) — settled decisions; append-only
 - [Testing guide](./docs/TESTING.md) — how to run tests and how the test database setup works
 - [Production image](./docs/production-image.md) — pinned runtime, configuration, and container acceptance
+- [Sandbox database](./docs/sandbox-database.md) — migration gate, pooled runtime role, guarded fixture seed/reset and diagnosis
 - [Synthetic testers](./docs/synthetic-testers.md) — guarded provisioning/revocation, production auth stage, and signing-key rotation
 - [Logging contract](./docs/logging.md) — levels, redaction, correlation, failure events
 - [Agent docs](./docs/agents/) — issue tracker, triage labels, domain doc conventions
