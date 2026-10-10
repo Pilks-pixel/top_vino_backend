@@ -16,6 +16,7 @@ import deckRouter from "./routes/deck/deck.router.ts";
 import cardRouter from "./routes/card/card.router.ts";
 import reviewRouter from "./routes/review/review.router.ts";
 import { createErrorHandler } from "./middlewares/errorHandler.ts";
+import { releaseCommit } from "./config/releaseIdentity.ts";
 import { createRateLimiters } from "./config/rateLimits.ts";
 import {
   AUTH_CLIENT_IP_HEADER,
@@ -67,6 +68,7 @@ function generateRequestId(req: IncomingMessage, res: ServerResponse): string {
 
 export function createApp(applicationLogger = logger) {
   const app = express();
+  const commit = releaseCommit();
   app.set("trust proxy", reviewedProxyTrust());
   const sandbox = process.env.NODE_ENV === "production";
   const { authLimiter, generalLimiter, documentationLimiter } =
@@ -193,6 +195,7 @@ export function createApp(applicationLogger = logger) {
     },
   );
   app.get("/health", (_req, res) => {
+    if (commit) res.setHeader("X-Release-Commit", commit);
     res.json({
       status: "ok",
       uptime: process.uptime(),
@@ -279,6 +282,7 @@ export function createApp(applicationLogger = logger) {
   app.use(express.text({ type: () => true, limit: "10kb" }));
 
   app.get("/", async (_req, res) => {
+    if (commit) res.setHeader("X-Release-Commit", commit);
     res.type("html").send(rootPage);
   });
 
