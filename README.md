@@ -146,3 +146,5 @@ src/
 - **Services**: enforce business rules. Deck Access resolves ownership, collaborator role, and public visibility into a single answer; cards and reviews inherit their access from their deck.
 - **Models**: isolate Prisma data-access operations.
 - **Request lifecycle**: Client → Route → Middleware → Controller → Service → Model → Prisma → PostgreSQL. Errors flow through the global error handler into a consistent `{ success, status, statusCode, message }` shape.
+
+For the disposable hosted sandbox, follow [deployment setup](docs/deployment-runbook.md) or run `bash scripts/setup-sandbox.sh`. Live verification remains an operator step.

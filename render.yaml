@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://render.com/schema/render.yaml.json
+# One disposable service; Neon is dashboard-managed. No runtime secret values.
+services:
+  - type: web
+    name: top-vino-sandbox
+    runtime: docker
+    branch: main
+    region: singapore
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /ready
+    # Free rejects maxShutdownDelaySeconds; platform default is 30s.
+    # The application independently finishes shutdown within 10s.
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BETTER_AUTH_URL
+        value: https://top-vino-sandbox.onrender.com
+      - key: FRONTEND_URL
+        value: https://top-vino-sandbox.onrender.com
+      - key: TRUST_PROXY
+        value: "false"
+      - key: LOG_LEVEL
+        value: info
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: BETTER_AUTH_SECRETS
+        sync: false
+# PORT is supplied by Render. No disk, registry, previews, or Render database.
