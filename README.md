@@ -7,6 +7,7 @@ A spaced repetition learning/flashcard application backend built with Node.js, E
 - [Domain glossary](./docs/GLOSSARY.md) — the ubiquitous language for decks, cards, access, and study
 - [Architecture decision records](./docs/adr/) — settled decisions; append-only
 - [Testing guide](./docs/TESTING.md) — how to run tests and how the test database setup works
+- [Portability and graduation](./docs/portability.md) — private synthetic dump/restore rehearsal, provider inventory and durability/AWS gates
 - [Production image](./docs/production-image.md) — pinned runtime, configuration, and container acceptance
 - [Sandbox database](./docs/sandbox-database.md) — migration gate, pooled runtime role, guarded fixture seed/reset and diagnosis
 - [Synthetic testers](./docs/synthetic-testers.md) — guarded provisioning/revocation, production auth stage, and signing-key rotation
