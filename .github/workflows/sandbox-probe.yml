@@ -1,0 +1,26 @@
+name: Sandbox probe
+on:
+  schedule:
+    - cron: "17 2 * * *" # 09:17 Asia/Bangkok; GitHub scheduling is best effort.
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: sandbox-probe
+  cancel-in-progress: false
+jobs:
+  cold-path:
+    name: Daily cold-path probe
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      SANDBOX_URL: ${{ vars.SANDBOX_URL }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .nvmrc
+      - name: Cold liveness then readiness, one five-minute retry
+        run: node scripts/sandbox-probe.mjs
