@@ -59,7 +59,7 @@ try {
 }
 
 const pgImage =
-  "postgres:15@sha256:3b0d656f5fff31c7d8a64f500a703dcf3f35e98ce78f602831a73059a5e6a012";
+  "postgres:18@sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6";
 const image = options["--image"];
 const prefix = `vino-portability-${process.pid}-${Date.now()}`;
 const network = `${prefix}-network`;

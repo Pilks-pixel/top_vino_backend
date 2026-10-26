@@ -57,8 +57,11 @@ already exists, and verify history denial before launching the first candidate.
 
 Use an owner connection from a trusted workstation. Create the runtime role via
 SQL if the dashboard's default role has elevated membership, and set its password
-through a private provider control or psql's `\password`, never a tracked SQL
-literal. Substitute the reviewed role/database identifiers. This example uses
+through the private Neon SQL Editor using `ALTER ROLE ... WITH PASSWORD`, never
+a tracked SQL literal. The Console reset action can reject passwordless roles;
+Neon requires plaintext SQL passwords and does not support the hashed passwords
+sent by psql's `\password`. Follow the [initial-password procedure](deployment-runbook.md#1-account-and-database-setup).
+Substitute the reviewed role/database identifiers. This example uses
 `top_vino_owner` and `top_vino_runtime`:
 
 ```sql

@@ -12,15 +12,39 @@ This environment accepts synthetic disposable data only, may sleep or reset, and
 | --- | --- | --- |
 | Render service | `top-vino-sandbox`, Docker, `main`, Singapore, Free | Pending |
 | Public origin | `https://top-vino-sandbox.onrender.com` | Pending: generated hostname must match |
-| Neon project / branch / database | `top-vino-sandbox` / `production` / `top_vino_sandbox` | Pending |
-| Neon region / PostgreSQL major | Singapore / 15 | Pending: verify availability before creation |
-| Migration owner | `top_vino_owner`; direct TLS connection → Render `DIRECT_URL` | Pending |
-| Runtime role | `top_vino_runtime`; pooled TLS connection → Render `DATABASE_URL` | Pending |
+| Neon project / branch / database | `Top-Vino` / `production` / `neondb` | Verified by CLI on 2026-10-12; only database currently present |
+| Neon region / PostgreSQL major | Singapore / 18 | Verified by CLI on 2026-10-12; local PostgreSQL 18 compatibility passed on 2026-10-26; reviewed-main CI and live API acceptance pending |
+| Migration owner | `neondb_owner`; direct TLS connection → Render `DIRECT_URL` | Role and direct TLS URL verified by CLI on 2026-10-12; operator reported successful guarded migration on 2026-10-26 |
+| Runtime role | `top_vino_runtime`; pooled TLS connection → Render `DATABASE_URL` | Operator reported successful connection, application CRUD, schema CREATE denial and migration-history denial on 2026-10-26; live API smoke pending |
 | Auth key ring | Versioned keys → Render `BETTER_AUTH_SECRETS` | Pending |
 | Proxy trust | `false`; reviewed one-hop opt-in requires live spoof tests first | Pending topology evidence |
 | Free shutdown allowance | Platform default 30 seconds; application exits within 10 | Blueprint validator rejects customization on Free |
 
 Record actual **names**, PostgreSQL major and region in a reviewed change if they differ. Never record connection strings, endpoint values, passwords, generated provider IDs, raw logs or personal details. Keep provider IDs in your private operator notes.
+
+## Neon CLI setup and current evidence
+
+On 2026-10-12, the parent working directory (`top_vino/`, above this backend checkout) was linked to the existing `Top-Vino` project and its `production` branch. The organization reports the Free plan; dashboard confirmation that automatic paid usage is impossible remains pending. Neon CLI 8.3.5 and the Neon skills were installed for Codex and GitHub Copilot. The project-local Codex MCP configuration uses OAuth and is pinned to this project; it creates no API key. Restart Codex to load the configuration and complete MCP OAuth on first use.
+
+The working directory contains this policy:
+
+```ts
+import { defineConfig } from "@neon/config/v1";
+
+export default defineConfig({});
+```
+
+Both `neon config plan` and `neon deploy` succeeded with no changes required. This reconciles Neon service configuration; it does not apply Prisma migrations, create the runtime role, deploy the Render API, or establish live acceptance. Local `.neon`, `.env`/`.env.*`, and the project-specific MCP configuration are ignored by the parent directory's `.gitignore`; these setup artifacts are outside this backend Git checkout.
+
+The CLI pulled pooled `DATABASE_URL` and direct `DATABASE_URL_UNPOOLED` values into the ignored parent `.env.local`. Both use `neondb_owner` at setup; they are operator connections, not the separate runtime credentials required by this runbook. For Render, obtain a pooled URL for `top_vino_runtime` and set `DIRECT_URL` from the owner's direct URL. Do not copy the owner's pooled URL into the API's runtime `DATABASE_URL`. The CLI listed only `neondb_owner` at setup.
+
+On 2026-10-26, the operator reported successful guarded migration with the owner connection, followed by the explicit runtime grants. Reported runtime checks passed: login and Deck SELECT; application User insert/update/select/delete inside a rolled-back transaction; denied CREATE TABLE and migration-history SELECT; catalog checks showed no schema/database CREATE, elevated flags, memberships, public-table ownership or migration-history privileges. These are operator-reported database checks, not live API or Render acceptance. The migration created no fixtures and the CRUD check retained no test record.
+
+The live project uses PostgreSQL **18**. CI, Compose, and the production-image, sandbox-data and portability verification scripts now pin the official PostgreSQL 18 image by digest. Guided setup and portability preparation also require 18. Compose uses a new `postgres_18_data` volume mounted at `/var/lib/postgresql`; existing PostgreSQL 15 data requires logical dump/restore, not reuse of the old database directory. Run the migration, role-denial, container and portability checks against PostgreSQL 18 before accepting a Render candidate. A successful empty-policy Neon deployment is not PostgreSQL 18 application compatibility evidence.
+
+Local verification on 2026-10-26 passed using Node 24.20.0, npm 11.19.0 and the pinned PostgreSQL 18 image (observed server version 18.6): locked install, Prisma generation, lint, types, build, all 376 Jest tests across 31 suites, all 29 operations tests, guarded sandbox lifecycle acceptance, final Linux AMD64 image acceptance, and synthetic TLS dump/restore plus API smoke and credential rotation. The final image ran through Docker Desktop emulation on Apple Silicon. Shell syntax, Compose validation and Git whitespace checks also passed. These checks used isolated synthetic local databases; actual Neon export, complete live API smoke and Render acceptance remain pending.
+
+For the next session, review the `chore/postgres-18` changes, obtain successful `CI / quality` and `CI / container` results on the accepted revision, and complete the protected-main gate below. Then continue with the Render Blueprint and its dashboard-only `DATABASE_URL`, `DIRECT_URL` and `BETTER_AUTH_SECRETS` fields. No secret values belong in this runbook.
 
 ## Repeatable guided setup
 
@@ -31,17 +55,25 @@ Do not create the Blueprint while these draft layers are unmerged. The operator 
 ## 1. Account and database setup
 
 1. Open [Neon Console](https://console.neon.tech) and [Render Dashboard](https://dashboard.render.com). Authorize only this repository in Render's GitHub integration. Keep workspace/dashboard and log access owner-only. Confirm billing settings make automatic paid overage impossible in both accounts.
-2. In Neon, create the planned Free project in Singapore, with PostgreSQL 15, its selected branch and database. If that major/region is unavailable, stop and review the supported-major decision and CI/image tests before choosing another. Do not create a second project, a paid compute, or a Neon API key.
+2. In Neon, select the existing Free `Top-Vino` project in Singapore, with PostgreSQL 18, branch `production` and database `neondb`. Verify the inventory against the live console and complete the PostgreSQL 18 compatibility checks above. Do not create a second project, a paid compute, or a Neon API key.
 3. Use the project owner role for migrations (record its actual name; the table is the intended name). Obtain the **direct** owner connection and the **pooled** runtime connection separately through Connect, both with TLS. Keep endpoint values private. Begin runtime options at `connection_limit=5`, `connect_timeout=15`, `pool_timeout=10`. Avoid credentials in shell history, process arguments, screenshots and shared logs.
-4. Create the runtime role with SQL in the console SQL Editor, rather than the Add Role button: [Neon-created console/API roles inherit administrative `neon_superuser` membership](https://neon.com/docs/manage/roles). Run the following as the verified owner, replacing only the reviewed role/database names if necessary. Set the role's password privately through the console role password reset flow; do not paste it into a tracked SQL file.
+4. Create the runtime role with SQL in the console SQL Editor, rather than the Add Role button: [Neon-created console/API roles inherit administrative `neon_superuser` membership](https://neon.com/docs/manage/roles). Run the following as the verified owner, replacing only the reviewed role/database names if necessary. This creates a role without a password; initialize its password separately as described below.
 
 ```sql
 CREATE ROLE top_vino_runtime LOGIN NOINHERIT NOSUPERUSER
   NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
-GRANT CONNECT ON DATABASE top_vino_sandbox TO top_vino_runtime;
+GRANT CONNECT ON DATABASE neondb TO top_vino_runtime;
 GRANT USAGE ON SCHEMA public TO top_vino_runtime;
 ```
+
+Generate and save a unique random password in your password manager. In the private Neon SQL Editor, select `production`, `neondb` and `neondb_owner`, then run the following with the placeholder replaced locally. Do not rerun `CREATE ROLE` for an existing role.
+
+```sql
+ALTER ROLE top_vino_runtime WITH PASSWORD '<unique-random-password>';
+```
+
+The Console reset action can reject a passwordless SQL-created role with `cannot update password for role without password`; it is not the initial-password step. [Neon requires plaintext passwords in SQL and does not support hashed passwords](https://neon.com/docs/manage/roles#manage-roles-with-sql), so do not use psql's `\password` command, which sends a hashed password. Submit the real password only through the private TLS connection/editor; never put it in a tracked file, shell argument/history, shared log or chat. The documentation does not establish provider query-history/log redaction. This `ALTER ROLE` changes only the password and preserves the role's privilege restrictions. Verify a fresh runtime connection before proceeding to migrations and grants.
 
 **Before creating the first Render candidate**, initialize the empty schema through the guarded workstation `npm run sandbox:migrate -- --confirm-target "$SANDBOX_DATABASE_TARGET"` action in [database safeguards](./sandbox-database.md). Privately prompt for DIRECT_URL in a subshell and set the workstation opt-in; this never starts the API. Confirm success without copying raw CLI output. The migration history table must exist before future default privileges are installed.
 

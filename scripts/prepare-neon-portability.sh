@@ -198,11 +198,11 @@ step "Select the explicitly approved temporary rehearsal branch, not the serving
 ask NEON_PROJECT_ID "Verified project ID:"
 ask NEON_BRANCH_ID "Verified temporary branch ID:"
 ask NEON_DATABASE "Verified database name:"
-ask NEON_POSTGRES_MAJOR "PostgreSQL major (this rehearsal supports 15):"
+ask NEON_POSTGRES_MAJOR "PostgreSQL major (this rehearsal supports 18):"
 for value in "$NEON_PROJECT_ID" "$NEON_BRANCH_ID" "$NEON_DATABASE"; do
   [[ "$value" =~ ^[A-Za-z0-9_-]+$ ]] || { warn "Invalid target fact; inspect the actual dashboard target."; exit 1; }
 done
-[[ "$NEON_POSTGRES_MAJOR" = 15 ]] || { warn "Unsupported major: review the pins/migrations and redo local evidence first."; exit 1; }
+[[ "$NEON_POSTGRES_MAJOR" = 18 ]] || { warn "Unsupported major: review the pins/migrations and redo local evidence first."; exit 1; }
 confirm "Verified account/project/branch/database, free quotas and direct owner role match the inventory?" || exit 1
 write_env NEON_PROJECT_ID "$NEON_PROJECT_ID"
 write_env NEON_BRANCH_ID "$NEON_BRANCH_ID"
