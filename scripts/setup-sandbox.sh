@@ -198,8 +198,8 @@ confirm "Both accounts are incapable of automatic paid overage?" || exit 1
 
 stage "Create the dashboard-managed Neon project"
 open_url "https://console.neon.tech"
-step "Create one Free project in Singapore, PostgreSQL 15; selected branch/database."
-step "If PostgreSQL 15 is unavailable, stop and review the supported-major change."
+step "Create one Free project in Singapore, PostgreSQL 18; selected branch/database."
+step "If PostgreSQL 18 is unavailable, stop and review the supported-major change."
 ask NEON_PROJECT_NAME "Verified project name:"
 ask NEON_BRANCH_NAME "Verified branch name:"
 ask NEON_DATABASE_NAME "Verified database name:"

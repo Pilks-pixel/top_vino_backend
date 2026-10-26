@@ -34,6 +34,15 @@ npm test
 
 Copy `.env.example` to `.env` and fill in the required values before starting.
 
+Local development and CI use PostgreSQL 18. Compose mounts its data volume at
+`/var/lib/postgresql`, as required by the [official PostgreSQL 18 image](https://hub.docker.com/_/postgres).
+The new `postgres_18_data` volume starts empty; the previous `postgres_data`
+volume is retained. Apply committed migrations to the new database before use.
+To retain PostgreSQL 15 data, dump it with the old server and restore it into
+PostgreSQL 18 following the [PostgreSQL upgrade procedure](https://www.postgresql.org/docs/18/upgrading.html).
+Changing the image does not upgrade an existing database directory. Do not run
+`docker compose down -v` to perform this upgrade.
+
 ## API contract
 
 The generated OpenAPI 3.1 document is served as JSON at `GET /openapi.json`.

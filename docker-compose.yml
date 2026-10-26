@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   postgres:
-    image: postgres:15
+    image: postgres:18@sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6
     restart: always
     ports:
       - "5432:5432"
@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: hello_you
       POSTGRES_DB: top_vino_app
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_18_data:/var/lib/postgresql
 
   api:
     build:
@@ -31,4 +31,4 @@ services:
       DATABASE_URL: postgres://pete:hello_you@postgres:5432/top_vino_app
 
 volumes:
-  postgres_data:
+  postgres_18_data:

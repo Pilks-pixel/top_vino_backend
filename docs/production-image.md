@@ -10,9 +10,20 @@ Build the release architecture from a clean checkout:
 npm run test:container
 ```
 
-Only Docker and Node are needed to run this acceptance command; it needs no local npm install or database. It builds Linux AMD64 (emulated on Apple Silicon), creates an isolated PostgreSQL 15 container and test network, migrates the temporary database through the final candidate entrypoint, and provisions a hashed synthetic tester fixture outside runtime HTTP. It verifies image contents, non-root execution, the configured port on all interfaces, read-only filesystem operation, offline migration-tool loading, failed migration blocking traffic, credential shedding, no-op restart, sanitized configuration failure, liveness/readiness during database loss, an authenticated Prisma-backed User Profile read, and both termination signals. Fault injection at HTTP/database boundaries also checks repeated signals, close/disconnect failures, and the ten-second deadline. Owned containers, images and the network are removed even on failure; build cache is retained. It never uses workstation environment files or production credentials.
+Only Docker and Node are needed to run this acceptance command; it needs no local npm install or database. It builds Linux AMD64 (emulated on Apple Silicon), creates an isolated PostgreSQL 18 container and test network, migrates the temporary database through the final candidate entrypoint, and provisions a hashed synthetic tester fixture outside runtime HTTP. It verifies image contents, non-root execution, the configured port on all interfaces, read-only filesystem operation, offline migration-tool loading, failed migration blocking traffic, credential shedding, no-op restart, sanitized configuration failure, liveness/readiness during database loss, an authenticated Prisma-backed User Profile read, and both termination signals. Fault injection at HTTP/database boundaries also checks repeated signals, close/disconnect failures, and the ten-second deadline. Owned containers, images and the network are removed even on failure; build cache is retained. It never uses workstation environment files or production credentials.
 
 On Apple Silicon, Docker Desktop Rosetta may inject exactly `--no-opt -r /proc/.reset` before the compiled server argument. Local acceptance permits only that recognized emulation prefix and still checks the PID 1 executable/environment. Native Linux CI requires exactly `node dist/server.js`.
+
+When changing the Node image or OpenSSL package pins, first verify the base stage
+without cached layers, then run the full container acceptance command above:
+
+```bash
+docker build --no-cache --platform linux/amd64 --target base -t top-vino-base-check .
+```
+
+Debian's live repositories can retire older package revisions. Update the
+`openssl` and `libssl3` pins together to an available reviewed revision. A cached
+successful build does not establish that a clean CI runner can download them.
 
 For a manual build:
 
