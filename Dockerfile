@@ -2,7 +2,7 @@ FROM node:24.20.0-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd
 WORKDIR /app
 # Prisma's native engine requires OpenSSL on Debian slim.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends openssl=3.0.22-1~deb12u1 libssl3=3.0.22-1~deb12u1 \
+    && apt-get install -y --no-install-recommends openssl=3.0.22-1~deb12u2 libssl3=3.0.22-1~deb12u2 \
     && rm -rf /var/lib/apt/lists/*
 RUN test "$(node --version)" = "v24.20.0" && test "$(npm --version)" = "11.19.0"
 

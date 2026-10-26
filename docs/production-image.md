@@ -14,6 +14,17 @@ Only Docker and Node are needed to run this acceptance command; it needs no loca
 
 On Apple Silicon, Docker Desktop Rosetta may inject exactly `--no-opt -r /proc/.reset` before the compiled server argument. Local acceptance permits only that recognized emulation prefix and still checks the PID 1 executable/environment. Native Linux CI requires exactly `node dist/server.js`.
 
+When changing the Node image or OpenSSL package pins, first verify the base stage
+without cached layers, then run the full container acceptance command above:
+
+```bash
+docker build --no-cache --platform linux/amd64 --target base -t top-vino-base-check .
+```
+
+Debian's live repositories can retire older package revisions. Update the
+`openssl` and `libssl3` pins together to an available reviewed revision. A cached
+successful build does not establish that a clean CI runner can download them.
+
 For a manual build:
 
 ```bash
