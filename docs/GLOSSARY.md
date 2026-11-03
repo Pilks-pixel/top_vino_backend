@@ -10,9 +10,25 @@ A spaced-repetition learning application. Users build decks of cards, study them
 A named collection of cards belonging to exactly one user. The unit of sharing and of access control.
 _Avoid_: set, collection, pack
 
+**Subject**:
+A flat, user-owned grouping of decks used to organize study. A deck may belong to at most one subject; subject membership does not change deck access.
+_Avoid_: folder, category
+
+**Starter Deck**:
+An original, reviewed deck offered as a template for a user's editable copy. The copy is independent: later changes to the starter deck do not change existing copies.
+_Avoid_: synchronized deck
+
 **Card**:
 A single prompt and its answer, belonging to exactly one deck. A card has no owner of its own — it takes its owner from its deck.
 _Avoid_: flashcard, item, question
+
+**Basic Card**:
+A card with a text prompt and an answer revealed before the requestor rates their recall.
+_Avoid_: front/back note
+
+**Cloze Card**:
+A card whose prompt hides selected text for recall. All blanks are hidden and revealed together, with one recall rating and one schedule for the whole card.
+_Avoid_: separately scheduled blank
 
 **Card Revision**:
 An immutable version of a card's study content and grading rubric. Answer submissions retain the card revision they were shown even after the card changes.
@@ -61,6 +77,22 @@ _Avoid_: plan, membership, subscription level
 **Review**:
 One graded attempt at a card, recorded with the quality of recall the requestor reported.
 _Avoid_: attempt, answer, session
+
+**New Card**:
+A card the requestor has not yet reviewed. Newness belongs to the requestor's study history, not the card's creation date.
+_Avoid_: recently created card
+
+**Due Card**:
+A card whose next scheduled review time for the requestor has arrived.
+_Avoid_: new card
+
+**Practice Repeat**:
+An ungraded revisit to a card after failed recall. It is not a review and does not change progress or earn study-streak credit.
+_Avoid_: review, relearning step
+
+**Study Streak**:
+Consecutive calendar days in a user's saved timezone on which they recorded at least one review.
+_Avoid_: correct streak, consecutive correct answers
 
 **Answer Submission**:
 The response a requestor provides for an open-ended card revision before deciding the recall quality recorded by a review.
