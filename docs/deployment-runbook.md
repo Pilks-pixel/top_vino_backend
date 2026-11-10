@@ -1,6 +1,6 @@
 # Disposable Render–Neon sandbox
 
-Implements preparation for [#49](https://github.com/Pilks-pixel/top_vino_backend/issues/49), under [#41](https://github.com/Pilks-pixel/top_vino_backend/issues/41). **Live acceptance is pending.** Nothing here proves a public release exists. Keep the PR draft until the operator records the evidence below.
+Implements [#49](https://github.com/Pilks-pixel/top_vino_backend/issues/49), under [#41](https://github.com/Pilks-pixel/top_vino_backend/issues/41). The first public Render release has passed its live HTTP smoke. Broader deployment and operational acceptance remains in progress; see [remaining live acceptance](#remaining-live-acceptance).
 
 This environment accepts synthetic disposable data only, may sleep or reset, and has no uptime or recovery promise. The hard budget is $0. Never attach a Render payment method or enable Neon automatic paid usage. If the accounts already have a paid path, use an isolated Free account/workspace without that path or stop setup.
 
@@ -10,13 +10,13 @@ This environment accepts synthetic disposable data only, may sleep or reset, and
 
 | Planned choice | Value / destination | Verified live |
 | --- | --- | --- |
-| Render service | `top-vino-sandbox`, Docker, `main`, Singapore, Free | Pending |
-| Public origin | `https://top-vino-sandbox.onrender.com` | Pending: generated hostname must match |
+| Render service | `top-vino-sandbox`, Docker, `main`, Singapore, Free | Deployed; operator-confirmed live smoke passed on `aa5f576bca721f5b035dc2e6d102196a170f2fb9` on 2026-11-09 |
+| Public origin | `https://top-vino-sandbox.onrender.com` | Operator-confirmed live smoke and same-origin sign-in passed on 2026-11-09 |
 | Neon project / branch / database | `Top-Vino` / `production` / `neondb` | Verified by CLI on 2026-10-12; only database currently present |
-| Neon region / PostgreSQL major | Singapore / 18 | Verified by CLI on 2026-10-12; local PostgreSQL 18 compatibility passed on 2026-10-26; reviewed-main CI and live API acceptance pending |
+| Neon region / PostgreSQL major | Singapore / 18 | Verified by CLI on 2026-10-12; local PostgreSQL 18 compatibility passed on 2026-10-26; required CI checks and live API smoke passed for the accepted release |
 | Migration owner | `neondb_owner`; direct TLS connection → Render `DIRECT_URL` | Role and direct TLS URL verified by CLI on 2026-10-12; operator reported successful guarded migration on 2026-10-26 |
-| Runtime role | `top_vino_runtime`; pooled TLS connection → Render `DATABASE_URL` | Operator reported successful connection, application CRUD, schema CREATE denial and migration-history denial on 2026-10-26; live API smoke pending |
-| Auth key ring | Versioned keys → Render `BETTER_AUTH_SECRETS` | Pending |
+| Runtime role | `top_vino_runtime`; pooled TLS connection → Render `DATABASE_URL` | Operator reported successful connection, application CRUD, schema CREATE denial and migration-history denial on 2026-10-26; live auth and Deck smoke passed on 2026-11-09 |
+| Auth key ring | Versioned keys → Render `BETTER_AUTH_SECRETS` | Live sign-in passed; secret values remain private; rotation acceptance is separate |
 | Proxy trust | `false`; reviewed one-hop opt-in requires live spoof tests first | Pending topology evidence |
 | Free shutdown allowance | Platform default 30 seconds; application exits within 10 | Blueprint validator rejects customization on Free |
 
@@ -42,9 +42,9 @@ On 2026-10-26, the operator reported successful guarded migration with the owner
 
 The live project uses PostgreSQL **18**. CI, Compose, and the production-image, sandbox-data and portability verification scripts now pin the official PostgreSQL 18 image by digest. Guided setup and portability preparation also require 18. Compose uses a new `postgres_18_data` volume mounted at `/var/lib/postgresql`; existing PostgreSQL 15 data requires logical dump/restore, not reuse of the old database directory. Run the migration, role-denial, container and portability checks against PostgreSQL 18 before accepting a Render candidate. A successful empty-policy Neon deployment is not PostgreSQL 18 application compatibility evidence.
 
-Local verification on 2026-10-26 passed using Node 24.20.0, npm 11.19.0 and the pinned PostgreSQL 18 image (observed server version 18.6): locked install, Prisma generation, lint, types, build, all 376 Jest tests across 31 suites, all 29 operations tests, guarded sandbox lifecycle acceptance, final Linux AMD64 image acceptance, and synthetic TLS dump/restore plus API smoke and credential rotation. The final image ran through Docker Desktop emulation on Apple Silicon. Shell syntax, Compose validation and Git whitespace checks also passed. These checks used isolated synthetic local databases; actual Neon export, complete live API smoke and Render acceptance remain pending.
+Local verification on 2026-10-26 passed using Node 24.20.0, npm 11.19.0 and the pinned PostgreSQL 18 image (observed server version 18.6): locked install, Prisma generation, lint, types, build, all 376 Jest tests across 31 suites, all 29 operations tests, guarded sandbox lifecycle acceptance, final Linux AMD64 image acceptance, and synthetic TLS dump/restore plus API smoke and credential rotation. The final image ran through Docker Desktop emulation on Apple Silicon. Shell syntax, Compose validation and Git whitespace checks also passed. These checks used isolated synthetic local databases. The operator later confirmed the live Render smoke, log review, cross-tester private Deck denial, and required CI checks for the accepted release on 2026-11-09. Actual Neon export, transaction-pool behavior, and broader provider failure/recovery acceptance remain pending.
 
-For the next session, review the `chore/postgres-18` changes, obtain successful `CI / quality` and `CI / container` results on the accepted revision, and complete the protected-main gate below. Then continue with the Render Blueprint and its dashboard-only `DATABASE_URL`, `DIRECT_URL` and `BETTER_AUTH_SECRETS` fields. No secret values belong in this runbook.
+The API sandbox is live and frontend planning can begin. The frontend origin and browser cookie path still need a reviewed design and live verification before frontend sign-in is enabled. No secret values belong in this runbook.
 
 ## Repeatable guided setup
 
@@ -116,12 +116,18 @@ Follow [release/recovery](./release-recovery.md): stop ordinary merges on failed
 
 To retire, notify testers, stop intake/probe, remove the service from the reviewed Blueprint, then delete it in Render (sync does not delete removed resources). Revoke runtime, owner and temporary credentials and all tester sessions, delete the disposable Neon project deliberately, disconnect the repository integration when unused, and remove the public probe URL. Do not leave a payment method, deploy hook, secret, or stray service behind.
 
-## Live evidence still required
+## Remaining live acceptance
 
-- Billing cannot automatically charge; owner-only access and GitHub OAuth scope.
-- Actual Neon names/region/major, role privileges and pooled/direct TLS separation.
-- Active GitHub rules, two successful non-skipped raw contexts on accepted main SHA.
-- Blueprint-created single Free service and generated origin, checks-pass setting, actual migration/readiness/traffic sequence, full operator smoke and proxy shape.
-- Current provider email capabilities, retention, allowances and last scheduled probe recorded through [operations](./sandbox-operations.md).
+The operator confirmed on 2026-11-09 that the release smoke passed at `https://top-vino-sandbox.onrender.com` for commit `aa5f576bca721f5b035dc2e6d102196a170f2fb9`, Render logs were reviewed successfully, both required CI checks passed, and a second synthetic tester received 403 when requesting the first tester's private Deck. Keep the supporting check links and any raw provider evidence private.
+
+The following items remain before the full deployment/operations acceptance is complete:
+
+- Verify live billing controls prevent automatic charges, dashboard/log access is owner-only, and Render's GitHub OAuth scope is limited to this repository.
+- Read back the active GitHub rules and verify their blocking behavior; the two required CI contexts passed for the accepted release, but the negative-gate behavior still needs live evidence.
+- Record private evidence that migrations finish before Node starts, `DIRECT_URL` and provisioning credentials are absent from the running API, and `/ready` succeeds before traffic is switched.
+- Verify failed CI prevents a candidate, and build/migration/readiness failures preserve the previous healthy instance where one exists.
+- Complete a schema-compatible recovery smoke with automatic deployment deliberately paused and resumed.
+- Keep `TRUST_PROXY=false` until the real-client spoofing and independent-quota checks in [browser boundary](./browser-boundary.md) pass. These checks are required only before enabling `render-1`.
+- Confirm current provider alerts, log retention, quota allowances, and the first scheduled probe through [operations](./sandbox-operations.md).
 
 Provider references checked during preparation on 2026-10-07: [Blueprint reference](https://render.com/docs/blueprint-spec), [deploy/CI](https://render.com/docs/deploys), [Free constraints](https://render.com/docs/free), [Neon roles](https://neon.com/docs/manage/roles). Recheck live consoles before treating any plan capability as acceptance evidence.

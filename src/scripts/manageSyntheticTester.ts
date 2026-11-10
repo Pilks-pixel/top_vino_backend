@@ -7,6 +7,17 @@ import { parseArgs } from "node:util";
 import { createLogger } from "../lib/loggerCore.ts";
 
 const logger = createLogger({ environment: "production", logLevel: "info" });
+let failureStage = "operator_preflight";
+
+function safeErrorCode(error: unknown): string | undefined {
+  const code =
+    error && typeof error === "object" && "code" in error
+      ? error.code
+      : undefined;
+  return typeof code === "string" && /^[A-Z0-9_]{2,32}$/.test(code)
+    ? code
+    : undefined;
+}
 
 // This workstation-only command deliberately loads neither dotenv nor the
 // runtime Auth/Prisma modules. Its temporary database credential never becomes
@@ -31,6 +42,7 @@ async function main(): Promise<void> {
   )
     throw new Error("Operator safeguards not satisfied");
 
+  failureStage = "target_validation";
   const { target } = operatorDatabaseTarget(databaseUrl);
   if (
     process.env.SANDBOX_DATABASE_TARGET !== target ||
@@ -38,11 +50,13 @@ async function main(): Promise<void> {
   )
     throw new Error("Sandbox target confirmation required");
 
+  failureStage = "tester_validation";
   const email = values.email;
   if (!email || !/^[a-z0-9][a-z0-9._-]{0,63}@example\.test$/.test(email)) {
     throw new Error("Use a synthetic tester ID at example.test");
   }
   let file = values["credentials-file"];
+  failureStage = "delivery_path_validation";
   const project = await realpath(
     fileURLToPath(new URL("../../", import.meta.url)),
   );
@@ -58,22 +72,29 @@ async function main(): Promise<void> {
 
   // Use the workstation's PostgreSQL driver directly: Prisma's generated
   // constructor implicitly loads local .env files even with a datasource URL.
+  failureStage = "database_driver_load";
   const { default: pg } = await import("pg");
   const databaseClient = new pg.Client({
     connectionString: databaseUrl,
     connectionTimeoutMillis: 15_000,
     options: "-c search_path=public",
   });
-  databaseClient.on("error", () => {
+  databaseClient.on("error", error => {
     logger.error(
-      { event: "synthetic_tester_database_failure" },
+      {
+        event: "synthetic_tester_database_failure",
+        stage: failureStage,
+        code: safeErrorCode(error),
+      },
       "Operator database connection failed",
     );
     process.exitCode = 1;
   });
   let deliveryFileCreated = false;
   try {
+    failureStage = "database_connect";
     await databaseClient.connect();
+    failureStage = "tester_lookup";
     const found = await databaseClient.query<{ id: string }>(
       'SELECT "id" FROM "user" WHERE "email" = $1',
       [email],
@@ -101,30 +122,37 @@ async function main(): Promise<void> {
     if (existing)
       throw new Error("Existing tester credentials are never reset");
 
+    failureStage = "password_hash";
     const password = randomBytes(32).toString("base64url");
     const { hashPassword } = await import("better-auth/crypto");
     const passwordHash = await hashPassword(password);
     // Exclusive creation refuses existing files and symlinks. Password delivery
     // has its own private channel; stdout/stderr contain only safe events.
+    failureStage = "delivery_file_create";
     const delivery = await open(file!, "wx", 0o600);
     deliveryFileCreated = true;
     try {
+      failureStage = "delivery_file_write";
       await delivery.writeFile(JSON.stringify({ email, password }) + "\n");
     } finally {
       await delivery.close();
     }
     const id = randomUUID();
     await databaseClient.query("BEGIN");
+    failureStage = "user_insert";
     await databaseClient.query(
       'INSERT INTO "user" ("id", "email", "name", "updatedAt") VALUES ($1, $2, $3, CURRENT_TIMESTAMP)',
       [id, email, "Synthetic tester"],
     );
+    failureStage = "account_insert";
     await databaseClient.query(
       'INSERT INTO "account" ("id", "accountId", "providerId", "userId", "password", "updatedAt") VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)',
       [randomUUID(), id, "credential", id, passwordHash],
     );
+    failureStage = "transaction_commit";
     await databaseClient.query("COMMIT");
     deliveryFileCreated = false;
+    failureStage = "success_log";
     logger.info(
       { event: "synthetic_tester_provisioned" },
       "Private delivery file ready",
@@ -140,11 +168,15 @@ async function main(): Promise<void> {
 
 try {
   await main();
-} catch {
+} catch (error) {
   // Even parser, filesystem, and database errors can include credentials or
   // identifying input. Do not serialize arbitrary exception text or stacks.
   logger.error(
-    { event: "synthetic_tester_action_failed" },
+    {
+      event: "synthetic_tester_action_failed",
+      stage: failureStage,
+      code: safeErrorCode(error),
+    },
     "Check operator safeguards, target, tester ID, and private delivery path; existing credentials are never reset",
   );
   process.exitCode = 1;

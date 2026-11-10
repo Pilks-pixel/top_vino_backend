@@ -1,160 +1,76 @@
 # Top Vino Backend
 
-A spaced repetition learning/flashcard application backend built with Node.js, Express, TypeScript, and Prisma.
+The HTTP API for Top Vino, built with Node.js, Express, TypeScript, Prisma, and PostgreSQL.
 
-## 📚 Documentation
+## Current deployment
 
-- [Domain glossary](./docs/GLOSSARY.md) — the ubiquitous language for decks, cards, access, and study
-- [Architecture decision records](./docs/adr/) — settled decisions; append-only
-- [Testing guide](./docs/TESTING.md) — how to run tests and how the test database setup works
-- [Portability and graduation](./docs/portability.md) — private synthetic dump/restore rehearsal, provider inventory and durability/AWS gates
-- [Production image](./docs/production-image.md) — pinned runtime, configuration, and container acceptance
-- [Sandbox database](./docs/sandbox-database.md) — migration gate, pooled runtime role, guarded fixture seed/reset and diagnosis
-- [Synthetic testers](./docs/synthetic-testers.md) — guarded provisioning/revocation, production auth stage, and signing-key rotation
-- [Repository policy](./docs/repository-policy.md) — protected main, Dependabot, repeatable setup and live verification
-- [Logging contract](./docs/logging.md) — levels, redaction, correlation, failure events
-- [Agent docs](./docs/agents/) — issue tracker, triage labels, domain doc conventions
+The disposable API sandbox is live at [top-vino-sandbox.onrender.com](https://top-vino-sandbox.onrender.com). It contains synthetic data only, may sleep or reset, and has no uptime or recovery promise. Do not enter personal or irreplaceable information.
 
-## 🚀 Quick Start
+The operator reported these live checks on 2026-11-09:
+
+- Release smoke passed on commit `aa5f576bca721f5b035dc2e6d102196a170f2fb9`.
+- Render deploy and application logs were reviewed successfully.
+- A second synthetic tester received HTTP 403 when requesting the first tester's private Deck.
+- The required `CI / quality` and `CI / container` checks passed for the release.
+
+This confirms the initial API smoke. Broader failure, recovery, and provider-monitoring checks remain tracked in the [deployment runbook](./docs/deployment-runbook.md) and [release recovery guide](./docs/release-recovery.md).
+
+The backend is ready for frontend planning. Frontend sign-in still needs a reviewed origin and cookie plan before it is enabled.
+
+## Local development
+
+Requirements: Node.js `24.20.0`, npm `11.19.0`, and Docker with Compose.
 
 ```bash
-# Install dependencies
-nvm install && nvm use
+nvm install
+nvm use
+npm install --global npm@11.19.0
 npm ci
+cp .env.example .env
+```
 
-# Start development server with Docker
-docker-compose up
+Generate a private local Better Auth key with `openssl rand -base64 32` and put it in `.env` as `BETTER_AUTH_SECRET`. The example file uses the local PostgreSQL credentials from Compose; keep `.env` out of Git.
 
-# Or run locally (requires PostgreSQL)
+Start PostgreSQL, apply migrations, and run the API:
+
+```bash
+docker compose up -d postgres
+npx prisma migrate deploy
 npm run dev
+```
 
-# Run the test suite (PostgreSQL must be running)
+The API runs at `http://localhost:8000`. Browse the interactive reference at `/docs`; see the [API and local fixture guide](./docs/api-reference.md) before seeding or resetting local data.
+
+Run automated checks with PostgreSQL running:
+
+```bash
 npm test
+npm run test:operations
+npm run check-types
+npm run lint
+npm run build
 ```
 
-Copy `.env.example` to `.env` and fill in the required values before starting.
+The [testing guide](./docs/TESTING.md) explains the test database and test commands.
 
-Local development and CI use PostgreSQL 18. Compose mounts its data volume at
-`/var/lib/postgresql`, as required by the [official PostgreSQL 18 image](https://hub.docker.com/_/postgres).
-The new `postgres_18_data` volume starts empty; the previous `postgres_data`
-volume is retained. Apply committed migrations to the new database before use.
-To retain PostgreSQL 15 data, dump it with the old server and restore it into
-PostgreSQL 18 following the [PostgreSQL upgrade procedure](https://www.postgresql.org/docs/18/upgrading.html).
-Changing the image does not upgrade an existing database directory. Do not run
-`docker compose down -v` to perform this upgrade.
+## API and authentication
 
-## API contract
+- `GET /openapi.json` serves the Top Vino API contract.
+- `GET /docs` serves the Scalar reference.
+- `GET /health` reports process liveness; `GET /ready` checks database readiness.
+- Production access uses individually provisioned synthetic accounts. Public sign-up, password recovery, and Google sign-in are not enabled in the sandbox.
+- Deck and card reads enforce owner, collaborator, or public access. Knowing a private Deck ID does not grant access.
 
-The generated OpenAPI 3.1 document is served as JSON at `GET /openapi.json`.
-Its component schemas are generated from the same registered Zod schemas used
-by request validation and response contracts.
+The sandbox currently configures authentication for its API origin. Plan frontend hosting and session-cookie behavior with the [browser boundary guide](./docs/browser-boundary.md) before changing origins or proxy trust.
 
-A public Scalar reference is available at `GET /docs`, including in production.
-It describes live product routes alongside a clearly labeled Better Auth
-capability reference, whose advertised routes may be disabled. Its interactive
-console includes browser cookies for session-authenticated requests.
+## Project documentation
 
-**The public sandbox uses synthetic disposable data, may sleep or reset, and
-has no uptime or recovery promise.** Documentation and schemas discourage
-indexing and share a separate limit of 60 requests per minute per client IP.
-Unauthenticated `/health` and `/ready` probes bypass application request limits.
-
-See [docs/api-reference.md](./docs/api-reference.md) for the full developer
-workflow: the two Scalar sources, the seed fixture and credentials, the guarded
-reset commands, and the manual sign-in walkthrough.
-
-## 📋 Current Status
-
-**Phases 1–5 complete. Deck Access refactor delivered. 224 tests passing.**
-
-### Completed ✅
-
-- Centralized error handling with Prisma and Zod validation support
-- Deck, Card, and Review CRUD as TDD vertical slices with SM-2 spaced repetition scheduling
-- Authentication via Better Auth (email/password + Google OAuth), cookie sessions with `subscriptionType` exposed for FREE/PRO gating
-- Authorization middleware: `authMiddleware`, `requireOwnership`, `requireSubscription`
-- Centralized Deck Access module (`deckAccess.service.ts`) — every deck/card load names a Requestor and an Action; collection queries compose a visibility scope. Covers owner, editor/viewer collaborators, and public decks
-- Production hardening: env validation on startup, helmet, rate limiting, request size limits
-- Structured logging via pino with redaction and request correlation (`/health` and `/ready` endpoints included)
-- Graceful shutdown on SIGTERM/SIGINT
-- Jest + Supertest harness against a dedicated test database; coverage runs reliably green
-- Generated OpenAPI 3.1 contract at `/openapi.json`, with route-completeness and standards validation in CI
-- Minimal CI workflow: lint + typecheck + tests on every PR
-
-### Next Up 📌
-
-- Frontend application
-
-## 🗺️ Roadmap — Phase 6: Deployment (not started)
-
-Two options; pick one when ready. Continuous integration is independent of this choice and should land first.
-
-### Option A: Simple deployment (1–2 days)
-
-- PM2 process manager in cluster mode (`ecosystem.config.js`)
-- Deploy to a VPS (Digital Ocean, Linode, AWS EC2)
-- Nginx reverse proxy + Let's Encrypt SSL
-- PostgreSQL on the same server or managed
-
-### Option B: Cloud native (1–2 weeks)
-
-- AWS: ECS/Fargate, RDS, ALB, CloudWatch, Secrets Manager, auto scaling
-- Or a PaaS: Render, Railway, Fly.io
-- Infrastructure as code (Terraform / AWS CDK)
-- CD pipeline: automated deploy on merge to main, blue-green deployments
-
-Deferred features (from earlier phases): Apple OAuth, MFA, passkeys, admin roles, AI grading/generation, FSRS evolution of the SM-2 scheduler.
-
-## 🏗️ Backend Architecture
-
-```mermaid
-flowchart TD
-
-Client[Client]
-
-subgraph Express API
-    Routes[Routes]
-    Middleware[Middleware]
-    Controllers[Controllers]
-    Services[Services]
-    Models[Models]
-end
-
-Prisma[Prisma ORM]
-DB[(PostgreSQL)]
-
-Client --> Routes
-Routes --> Middleware
-Middleware --> Controllers
-Controllers --> Services
-Services --> Models
-Models --> Prisma
-Prisma --> DB
-```
-
-### Project structure
-
-```
-src/
-├── app.ts                  # Express app config — Better Auth mounted before express.json()
-├── server.ts               # Entry point with graceful shutdown
-├── config/                 # Rate limiter configuration
-├── lib/                    # Better Auth config, pino logger, Prisma client
-├── middlewares/            # authMiddleware, requireOwnership, requireSubscription,
-│                           # errorHandler, validationMiddleware
-├── model/                  # Data-access layer (users, deck, card, review)
-├── routes/                 # Controllers & routers per feature (user, deck, card, review)
-├── services/               # Business logic incl. deckAccess.service.ts and SM-2 scheduler
-├── types/                  # Express request augmentation
-└── utils/                  # AppError hierarchy, Zod schemas, catchAsync, env validation
-```
-
-### Layer responsibilities
-
-- **Routes/controllers**: map HTTP requests to service calls and return responses.
-- **Middlewares**: session resolution, validation, security headers, rate limiting, structured request logging, centralized error formatting.
-- **Services**: enforce business rules. Deck Access resolves ownership, collaborator role, and public visibility into a single answer; cards and reviews inherit their access from their deck.
-- **Models**: isolate Prisma data-access operations.
-- **Request lifecycle**: Client → Route → Middleware → Controller → Service → Model → Prisma → PostgreSQL. Errors flow through the global error handler into a consistent `{ success, status, statusCode, message }` shape.
-
-For the disposable hosted sandbox, follow [deployment setup](docs/deployment-runbook.md) or run `bash scripts/setup-sandbox.sh`. Live verification remains an operator step.
+- [Deployment runbook](./docs/deployment-runbook.md) — Render and Neon setup, live status, and remaining acceptance evidence
+- [Release smoke and recovery](./docs/release-recovery.md) — release checks, smoke command, logs, and recovery procedure
+- [Synthetic testers](./docs/synthetic-testers.md) — private provisioning, password change, revocation, and key rotation
+- [Sandbox database](./docs/sandbox-database.md) — migrations, role grants, fixture seed, and guarded reset
+- [Browser boundary](./docs/browser-boundary.md) — origins, cookies, proxy trust, limits, and request boundaries
+- [Repository policy](./docs/repository-policy.md) — protected-main and CI requirements
+- [Logging contract](./docs/logging.md) — structured logs, redaction, and request correlation
+- [Domain glossary](./docs/GLOSSARY.md) and [architecture decisions](./docs/adr/) — domain language and settled decisions
+- [Portability](./docs/portability.md) — database export/restore rehearsal and future durability gates

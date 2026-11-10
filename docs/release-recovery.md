@@ -1,6 +1,17 @@
 # Release smoke and recovery
 
-Preparation for [#50](https://github.com/Pilks-pixel/top_vino_backend/issues/50), following [decision #37](https://github.com/Pilks-pixel/top_vino_backend/issues/37) and [spec #41](https://github.com/Pilks-pixel/top_vino_backend/issues/41). **Live acceptance is pending.** Local tests verify the operator command and HTTP identity. They do not establish Render traffic switching, active repository gates, Neon configuration, or a successful public release.
+Release and recovery procedure for [#50](https://github.com/Pilks-pixel/top_vino_backend/issues/50), following [decision #37](https://github.com/Pilks-pixel/top_vino_backend/issues/37) and [spec #41](https://github.com/Pilks-pixel/top_vino_backend/issues/41). The initial public HTTP smoke has passed; the broader release and recovery acceptance below remains in progress.
+
+## Current live evidence
+
+The operator confirmed on 2026-11-09 (Asia/Bangkok) that:
+
+- Release smoke passed on live commit `aa5f576bca721f5b035dc2e6d102196a170f2fb9`.
+- Render deploy/application logs were reviewed successfully. The smoke command's `logsReview: "pending_operator_review"` field is a reminder only; the command cannot read or update the provider's logs.
+- A second synthetic tester received HTTP 403 from `GET /deck/{id}` for the first tester's private Deck.
+- Both required GitHub checks, `CI / quality` and `CI / container`, passed for the release.
+
+This confirms the first live release smoke and private-Deck access check. It does not complete the failure/recovery drills or provider operations review below. Keep check-run links and provider evidence private; never add raw logs or credentials here.
 
 ## One accepted main commit at a time
 
@@ -80,8 +91,16 @@ Only after compatibility is proven, choose the known-good deploy in the owner Da
 
 **Application rollback does not roll back PostgreSQL.** Prefer fix forward if compatibility cannot be proven. A destructive rebuild is allowed only while this is the explicitly disposable synthetic sandbox, after the separate target confirmation, notices and guarded reset in [database release](./sandbox-database.md); it is never a startup/retry action. Regrant runtime privileges and repeat provisioning, readiness/full smoke and log review afterward.
 
-## Pending live acceptance record
+## Remaining live acceptance record
 
-Keep ticket #50 and parent release acceptance pending until the operator records: exact accepted/live SHA and time (Asia/Bangkok), both successful raw check links, migration-before-Node and credential shedding evidence, readiness-before-traffic, full HTTP smoke and private log-review pass, failed-CI no-deploy, failed build/migration/readiness retaining the previous healthy instance where one exists, and schema-compatible recovery smoke with automatic deployment paused/resumed deliberately. Retain sanitized outcomes, not passwords, URLs with credentials, provider IDs or raw logs.
+The accepted/live SHA, successful HTTP smoke, operator log review, private-Deck denial, and required CI check results are recorded above. Keep ticket #50 and parent release acceptance pending until the operator also records:
+
+- Migration-before-Node and runtime credential-shedding evidence.
+- Evidence that readiness passed before traffic switched.
+- A failed-CI/no-deploy observation.
+- Build, migration, and readiness failure behavior, including preservation of the previous healthy instance where one exists.
+- A schema-compatible recovery smoke with automatic deployment deliberately paused and resumed.
+
+Retain only sanitized outcomes, commit/check links, and evidence time in the private release record. Do not record passwords, credential-bearing URLs, provider IDs, raw logs, or session values here.
 
 Provider documentation checked 2026-10-07: linked Render deploy, health and rollback documentation. Recheck live account capabilities and settings before counting any provider behavior as verified.
