@@ -28,10 +28,10 @@ Run test commands from the `server` directory:
 cd server
 ```
 
-Install dependencies first if needed:
+Use the pinned Node.js and npm versions (`24.20.0` and `11.19.0`), then install the lockfile dependencies if needed:
 
 ```bash
-npm install
+npm ci
 ```
 
 Then run one of the npm scripts:

@@ -2,7 +2,7 @@
 
 Issue [#42](https://github.com/Pilks-pixel/top_vino_backend/issues/42) establishes the portable boot contract from deployment spec [#41](https://github.com/Pilks-pixel/top_vino_backend/issues/41). Issue [#46](https://github.com/Pilks-pixel/top_vino_backend/issues/46) adds the offline migration entrypoint resolved in #37; [database lifecycle](./sandbox-database.md) explains separate roles, seed/reset and diagnosis. Provider deployment remains separately verified.
 
-Use Node 24.20.0 and npm 11.19.0 locally (`nvm install && nvm use`). `.npmrc` rejects dependency installs with a different baseline. The Dockerfile pins the resolved multi-platform Bookworm slim digest, checks both versions, pins the OpenSSL runtime packages, installs from the committed lockfile, and generates Prisma for the target platform. `npm run build` compiles application TypeScript to `dist/server.js`, excluding tests and operator scripts; `npm start` runs that entrypoint.
+Use Node 24.20.0 and npm 11.19.0 locally (`nvm install && nvm use`, then `npm install --global npm@11.19.0`). `.npmrc` rejects dependency installs with a different baseline. The Dockerfile pins the resolved multi-platform Bookworm slim digest, checks both versions, pins the OpenSSL runtime packages, installs from the committed lockfile, and generates Prisma for the target platform. `npm run build` compiles application TypeScript to `dist/server.js`, excluding tests and operator scripts; `npm start` runs that entrypoint.
 
 Build the release architecture from a clean checkout:
 

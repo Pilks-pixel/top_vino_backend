@@ -184,5 +184,6 @@ Run `npm run test:sandbox-data` for isolated temporary PostgreSQL CLI acceptance
 and `npm run test:container` for the final Linux AMD64 candidate contract.
 The operator harness explicitly emulates a workstation only for children using
 its private disposable PostgreSQL; it also proves real CI/Render environments
-are refused. Live
-Neon/Render behavior remains pending until dashboard setup and smoke are verified.
+are refused. The operator confirmed dashboard setup and the initial live
+Neon/Render smoke on 2026-11-09; see the [deployment runbook](./deployment-runbook.md)
+for the verified release and remaining failure/recovery evidence.
